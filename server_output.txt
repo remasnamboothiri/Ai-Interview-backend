@@ -1,0 +1,453 @@
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1043, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 994, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 492, in check
+    all_issues = checks.run_checks(
+        app_configs=app_configs,
+    ...<2 lines>...
+        databases=databases,
+    )
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\registry.py", line 89, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\contrib\auth\checks.py", line 46, in check_user_model
+    if not isinstance(cls.REQUIRED_FIELDS, (list, tuple)):
+                      ^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'User' has no attribute 'REQUIRED_FIELDS'
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\notifications\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1043, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 994, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 492, in check
+    all_issues = checks.run_checks(
+        app_configs=app_configs,
+    ...<2 lines>...
+        databases=databases,
+    )
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\registry.py", line 89, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\contrib\auth\checks.py", line 46, in check_user_model
+    if not isinstance(cls.REQUIRED_FIELDS, (list, tuple)):
+                      ^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'User' has no attribute 'REQUIRED_FIELDS'
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\config\settings.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\config\settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 14:28:10
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1043, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 994, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 492, in check
+    all_issues = checks.run_checks(
+        app_configs=app_configs,
+    ...<2 lines>...
+        databases=databases,
+    )
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\registry.py", line 89, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\contrib\auth\checks.py", line 46, in check_user_model
+    if not isinstance(cls.REQUIRED_FIELDS, (list, tuple)):
+                      ^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'User' has no attribute 'REQUIRED_FIELDS'
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\config\settings.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\notifications\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 14:31:37
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\activity_logs\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 14:35:52
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\activity_logs\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 14:36:50
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\system_settings\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 14:37:12
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\system_settings\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 14:37:30
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+Forbidden: /api/notifications/
+[02/Feb/2026 14:38:07] "GET /api/notifications/ HTTP/1.1" 403 63
+Forbidden: /api/notifications/
+[02/Feb/2026 14:38:28] "GET /api/notifications/ HTTP/1.1" 403 63
+Forbidden: /api/notifications/
+[02/Feb/2026 14:38:57] "GET /api/notifications/ HTTP/1.1" 403 63
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\config\settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 14:37:37
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\config\settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 14:54:07
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\config\settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 14:54:47
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\notifications\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 14:55:06
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+Forbidden: /api/notifications/
+[02/Feb/2026 15:27:51] "GET /api/notifications/ HTTP/1.1" 403 5201
+[02/Feb/2026 15:27:53] "GET /static/rest_framework/css/prettify.css HTTP/1.1" 200 817
+[02/Feb/2026 15:27:53] "GET /static/rest_framework/css/bootstrap-tweaks.css HTTP/1.1" 200 3426
+[02/Feb/2026 15:27:53] "GET /static/rest_framework/css/bootstrap.min.css HTTP/1.1" 200 121457
+[02/Feb/2026 15:27:53] "GET /static/rest_framework/css/default.css HTTP/1.1" 200 1152
+[02/Feb/2026 15:27:54] "GET /static/rest_framework/js/ajax-form.js HTTP/1.1" 200 3796
+[02/Feb/2026 15:27:54] "GET /static/rest_framework/js/csrf.js HTTP/1.1" 200 1793
+[02/Feb/2026 15:27:54] "GET /static/rest_framework/js/jquery-3.7.1.min.js HTTP/1.1" 200 87533
+[02/Feb/2026 15:27:54] "GET /static/rest_framework/js/default.js HTTP/1.1" 200 1268
+[02/Feb/2026 15:27:54] "GET /static/rest_framework/js/bootstrap.min.js HTTP/1.1" 200 39680
+[02/Feb/2026 15:27:54] "GET /static/rest_framework/js/prettify-min.js HTTP/1.1" 200 13632
+[02/Feb/2026 15:27:54] "GET /static/rest_framework/js/load-ajax-form.js HTTP/1.1" 200 59
+[02/Feb/2026 15:27:54] "GET /static/rest_framework/img/grid.png HTTP/1.1" 200 1458
+Not Found: /favicon.ico
+[02/Feb/2026 15:27:54] "GET /favicon.ico HTTP/1.1" 404 5405
+Forbidden: /api/activity-logs/
+[02/Feb/2026 15:29:47] "GET /api/activity-logs/ HTTP/1.1" 403 63
+[02/Feb/2026 15:31:04] "GET /admin HTTP/1.1" 301 0
+[02/Feb/2026 15:31:04] "GET /admin/ HTTP/1.1" 302 0
+[02/Feb/2026 15:31:07] "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4173
+[02/Feb/2026 15:31:08] "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2808
+[02/Feb/2026 15:31:08] "GET /static/admin/css/base.css HTTP/1.1" 200 22120
+[02/Feb/2026 15:31:08] "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2810
+[02/Feb/2026 15:31:08] "GET /static/admin/css/login.css HTTP/1.1" 200 951
+[02/Feb/2026 15:31:08] "GET /static/admin/css/responsive.css HTTP/1.1" 200 16565
+[02/Feb/2026 15:31:08] "GET /static/admin/js/theme.js HTTP/1.1" 200 1653
+[02/Feb/2026 15:31:08] "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+[02/Feb/2026 15:31:30] "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+[02/Feb/2026 15:31:33] "GET /admin/ HTTP/1.1" 200 13342
+[02/Feb/2026 15:31:33] "GET /static/admin/css/dashboard.css HTTP/1.1" 200 441
+[02/Feb/2026 15:31:33] "GET /static/admin/img/icon-changelink.svg HTTP/1.1" 200 380
+[02/Feb/2026 15:31:33] "GET /static/admin/img/icon-addlink.svg HTTP/1.1" 200 331
+[02/Feb/2026 15:31:57] "GET /admin/notifications/notification/ HTTP/1.1" 200 16161
+[02/Feb/2026 15:31:58] "GET /static/admin/css/changelists.css HTTP/1.1" 200 6878
+[02/Feb/2026 15:31:58] "GET /static/admin/js/actions.js HTTP/1.1" 200 8076
+[02/Feb/2026 15:31:59] "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 285314
+[02/Feb/2026 15:31:59] "GET /static/admin/js/jquery.init.js HTTP/1.1" 200 347
+[02/Feb/2026 15:31:59] "GET /static/admin/js/urlify.js HTTP/1.1" 200 7887
+[02/Feb/2026 15:31:59] "GET /static/admin/js/core.js HTTP/1.1" 200 6208
+[02/Feb/2026 15:31:59] "GET /static/admin/js/prepopulate.js HTTP/1.1" 200 1531
+[02/Feb/2026 15:31:59] "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 200 9777
+[02/Feb/2026 15:31:59] "GET /static/admin/img/search.svg HTTP/1.1" 200 458
+[02/Feb/2026 15:31:59] "GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 200 325171
+[02/Feb/2026 15:32:00] "GET /static/admin/js/filters.js HTTP/1.1" 200 978
+[02/Feb/2026 15:32:01] "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+[02/Feb/2026 15:32:01] "GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 200 581
+[02/Feb/2026 15:32:01] "GET /static/admin/img/tooltag-add.svg HTTP/1.1" 200 331
+[02/Feb/2026 15:32:13] "GET /admin/notifications/notification/add/ HTTP/1.1" 200 21330
+[02/Feb/2026 15:32:14] "GET /static/admin/js/calendar.js HTTP/1.1" 200 9141
+[02/Feb/2026 15:32:14] "GET /static/admin/css/forms.css HTTP/1.1" 200 8525
+[02/Feb/2026 15:32:14] "GET /static/admin/js/admin/DateTimeShortcuts.js HTTP/1.1" 200 19319
+[02/Feb/2026 15:32:14] "GET /static/admin/css/widgets.css HTTP/1.1" 200 11991
+[02/Feb/2026 15:32:14] "GET /static/admin/js/prepopulate_init.js HTTP/1.1" 200 586
+[02/Feb/2026 15:32:14] "GET /static/admin/js/change_form.js HTTP/1.1" 200 606
+[02/Feb/2026 15:32:16] "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+[02/Feb/2026 15:32:16] "GET /static/admin/img/icon-calendar.svg HTTP/1.1" 200 1086
+[02/Feb/2026 15:32:16] "GET /static/admin/img/icon-clock.svg HTTP/1.1" 200 677
+[02/Feb/2026 15:33:26] "POST /admin/notifications/notification/add/ HTTP/1.1" 302 0
+[02/Feb/2026 15:33:31,765] - Broken pipe from ('127.0.0.1', 52450)
+[02/Feb/2026 15:33:31,877] - Broken pipe from ('127.0.0.1', 63512)
+[02/Feb/2026 15:33:33] "POST /admin/notifications/notification/add/ HTTP/1.1" 302 0
+[02/Feb/2026 15:33:36] "GET /admin/notifications/notification/ HTTP/1.1" 200 20397
+[02/Feb/2026 15:33:37] "GET /static/admin/img/icon-no.svg HTTP/1.1" 200 560
+[02/Feb/2026 15:33:38] "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+[02/Feb/2026 15:33:39] "GET /static/admin/img/icon-yes.svg HTTP/1.1" 200 436
+[02/Feb/2026 15:33:39] "GET /static/admin/img/sorting-icons.svg HTTP/1.1" 200 1097
+Forbidden: /api/notifications/
+[02/Feb/2026 15:37:00] "GET /api/notifications/ HTTP/1.1" 403 63
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\notifications\views.py changed, reloading.
+Performing system checks...
+
+NOTIFICATIONS VIEWS LOADED - PERMISSION CLASSES SHOULD BE AllowAny
+System check identified no issues (0 silenced).
+February 02, 2026 - 15:25:11
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+Forbidden: /api/notifications/
+[02/Feb/2026 15:38:51] "GET /api/notifications/?format=json HTTP/1.1" 403 63
+[02/Feb/2026 15:39:22] "GET /api/notifications/1/ HTTP/1.1" 200 305
+Forbidden: /api/notifications/
+[02/Feb/2026 15:44:32] "GET /api/notifications/?user_id=16 HTTP/1.1" 403 63
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\notifications\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 15:38:14
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+Forbidden: /api/notifications/
+[02/Feb/2026 15:59:01] "GET /api/notifications/?user_id=16 HTTP/1.1" 403 63
+Forbidden: /api/notifications/
+[02/Feb/2026 15:59:01] "GET /api/notifications/?user_id=16 HTTP/1.1" 403 63
+[02/Feb/2026 15:59:01] "GET /api/agents/ HTTP/1.1" 200 1284
+[02/Feb/2026 15:59:04] "GET /api/agents/ HTTP/1.1" 200 1284
+[02/Feb/2026 15:59:06] "GET /api/notifications/1/ HTTP/1.1" 200 305
+[02/Feb/2026 15:59:06] "GET /api/notifications/2/ HTTP/1.1" 200 305
+[02/Feb/2026 15:59:07] "GET /api/notifications/3/ HTTP/1.1" 200 305
+[02/Feb/2026 15:59:08] "GET /api/notifications/2/ HTTP/1.1" 200 305
+[02/Feb/2026 15:59:08] "GET /api/notifications/1/ HTTP/1.1" 200 305
+[02/Feb/2026 15:59:09] "GET /api/notifications/3/ HTTP/1.1" 200 305
+[02/Feb/2026 15:59:15] "OPTIONS /api/notifications/1/ HTTP/1.1" 200 0
+[02/Feb/2026 15:59:17] "DELETE /api/notifications/1/ HTTP/1.1" 200 62
+Not Found: /api/notifications/1/
+[02/Feb/2026 15:59:18] "DELETE /api/notifications/1/ HTTP/1.1" 404 50
+[02/Feb/2026 15:59:25] "OPTIONS /api/notifications/2/ HTTP/1.1" 200 0
+[02/Feb/2026 15:59:27] "DELETE /api/notifications/2/ HTTP/1.1" 200 62
+[02/Feb/2026 15:59:35] "OPTIONS /api/notifications/mark_all_as_read/ HTTP/1.1" 200 0
+[02/Feb/2026 15:59:37] "POST /api/notifications/mark_all_as_read/ HTTP/1.1" 200 59
+[02/Feb/2026 15:59:38] "POST /api/notifications/mark_all_as_read/ HTTP/1.1" 200 59
+[02/Feb/2026 15:59:46] "GET /api/agents/ HTTP/1.1" 200 1284
+[02/Feb/2026 15:59:48] "GET /api/agents/ HTTP/1.1" 200 1284
+Forbidden: /api/system-settings/
+[02/Feb/2026 16:05:37] "GET /api/system-settings/ HTTP/1.1" 403 63
+[02/Feb/2026 16:41:23] "GET /api/agents/ HTTP/1.1" 200 1284
+[02/Feb/2026 16:41:24] "GET /api/agents/ HTTP/1.1" 200 1284
+Forbidden: /api/activity-logs/
+[02/Feb/2026 16:41:42] "GET /api/activity-logs/ HTTP/1.1" 403 63
+Forbidden: /api/activity-logs/
+[02/Feb/2026 16:41:42] "GET /api/activity-logs/ HTTP/1.1" 403 63
+Forbidden: /api/system-settings/
+[02/Feb/2026 16:41:50] "GET /api/system-settings/ HTTP/1.1" 403 63
+Forbidden: /api/system-settings/
+[02/Feb/2026 16:41:50] "GET /api/system-settings/ HTTP/1.1" 403 63
+Forbidden: /api/activity-logs/
+[02/Feb/2026 16:42:06] "GET /api/activity-logs/ HTTP/1.1" 403 63
+Forbidden: /api/activity-logs/
+[02/Feb/2026 16:42:06] "GET /api/activity-logs/ HTTP/1.1" 403 63
+[02/Feb/2026 16:55:28] "GET /api/interviews/ HTTP/1.1" 200 52
+[02/Feb/2026 16:56:55] "GET /api/jobs/ HTTP/1.1" 200 2425
+[02/Feb/2026 16:58:19] "GET /api/users/ HTTP/1.1" 200 3094
+Bad Request: /api/interviews/
+[02/Feb/2026 17:00:33] "POST /api/interviews/ HTTP/1.1" 400 59
+Bad Request: /api/interviews/
+[02/Feb/2026 17:00:52] "POST /api/interviews/ HTTP/1.1" 400 60
+[02/Feb/2026 17:01:05] "GET /api/users/ HTTP/1.1" 200 3094
+[02/Feb/2026 17:01:08] "GET /api/users/ HTTP/1.1" 200 3094
+[02/Feb/2026 17:01:52] "GET /api/interviews/?ordering=-scheduled_at HTTP/1.1" 200 52
+[02/Feb/2026 17:01:54] "GET /api/interviews/?ordering=-scheduled_at HTTP/1.1" 200 52
+[02/Feb/2026 17:01:55] "GET /api/candidates/ HTTP/1.1" 200 584
+[02/Feb/2026 17:01:56] "GET /api/jobs/ HTTP/1.1" 200 2425
+[02/Feb/2026 17:01:56] "GET /api/agents/ HTTP/1.1" 200 1284
+[02/Feb/2026 17:01:57] "GET /api/candidates/ HTTP/1.1" 200 584
+[02/Feb/2026 17:01:58] "GET /api/jobs/ HTTP/1.1" 200 2425
+[02/Feb/2026 17:01:58] "GET /api/agents/ HTTP/1.1" 200 1284
+[02/Feb/2026 17:02:54] "OPTIONS /api/interviews/ HTTP/1.1" 200 0
+Internal Server Error: /api/interviews/
+Traceback (most recent call last):
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\rest_framework\mixins.py", line 19, in create
+    self.perform_create(serializer)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\interviews\views.py", line 57, in perform_create
+    serializer.save(created_by=self.context['request'].user)
+                               ^^^^^^^^^^^^
+AttributeError: 'InterviewViewSet' object has no attribute 'context'
+[02/Feb/2026 17:02:59] "POST /api/interviews/ HTTP/1.1" 500 103007
+Forbidden: /api/activity-logs/
+[03/Feb/2026 08:55:40] "GET /api/activity-logs/ HTTP/1.1" 403 63
+Forbidden: /api/activity-logs/
+[03/Feb/2026 08:55:40] "GET /api/activity-logs/ HTTP/1.1" 403 63
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\activity_logs\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 15:53:08
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\config\settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 03, 2026 - 09:36:52
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\config\settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 03, 2026 - 10:08:28
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\config\settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 03, 2026 - 10:08:37
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader

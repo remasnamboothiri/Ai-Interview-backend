@@ -16,8 +16,39 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from notifications import urls as notification_urls
+from activity_logs import urls as activity_log_urls
+from system_settings import urls as system_setting_urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/companies/', include('companies.urls')),
+    path('api/', include('users.urls')),      # User app urls
+    path('api/subscriptions/', include('subscriptions.urls')),
+    path('api/recruiters/', include('recruiters.urls')), 
+    path('api/candidates/', include('candidates.urls')),
+    path('api/candidate-education/', include('candidate_education.urls')),  
+    path('api/files/', include('files.urls')),  
+    path('api/candidate-documents/', include('candidate_documents.urls')),
+    
+    path('api/', include('agents.urls')),
+    path('api/', include('evaluation_criteria.urls')),
+    path('api/', include('default_questions.urls')),  
+    
+    path('api/', include('jobs.urls')),
+    
+    path('api/', include('job_custom_questions.urls')),
+    path('api/', include('job_applications.urls')),
+    
+    path('api/', include('interviews.urls')),
+    path('api/', include('interview_data.urls')),
+    
+    path('api/', include('interview_screenshots.urls')),
+    
+    path('api/interview-results/', include('interview_results.urls')), 
+    
+    path('api/', include(notification_urls)),
+    path('api/', include(activity_log_urls)), 
+    
+    path('api/', include(system_setting_urls)), 
 ]

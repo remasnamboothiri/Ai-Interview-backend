@@ -1,0 +1,33 @@
+Watching for file changes with StatReloader
+[02/Feb/2026 12:43:36] "GET /api/jobs/ HTTP/1.1" 200 2425
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\notifications\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 12:37:29
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\activity_logs\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 02, 2026 - 12:43:55
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\system_settings\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+Watching for file changes with StatReloader
+Forbidden: /api/notifications/
+[02/Feb/2026 12:44:33] "GET /api/notifications/ HTTP/1.1" 403 63

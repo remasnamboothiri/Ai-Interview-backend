@@ -1,6 +1,4 @@
 from django.shortcuts import render
-
-# Create your views here.
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .models import Company
@@ -10,17 +8,34 @@ class CompanyViewSet(viewsets.ModelViewSet):
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
     
-    def list(self, request):         #This function handles GET requests to /api/companies/
-        companies = self.get_queryset()     # get all companies from datbase
-        serializer = self.get_serializer(companies, many=True)  #Convert all companies to JSON forma
+    def list(self, request):
+        """Get all companies"""
+        companies = self.get_queryset()
+        serializer = self.get_serializer(companies, many=True)
         return Response({
             'success': True,
             'count': companies.count(),
             'data': serializer.data
         })
     
-    def create(self, request):  #This function handles POST requests to /api/companies/
-        serializer = self.get_serializer(data=request.data)  #Take the JSON data from the request and prepare to convert it to a Company object
+    def retrieve(self, request, pk=None):
+        """Get single company by ID"""
+        try:
+            company = self.get_queryset().get(pk=pk)
+            serializer = self.get_serializer(company)
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+        except Company.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Company not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+    
+    def create(self, request):
+        """Create new company"""
+        serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({
@@ -32,3 +47,40 @@ class CompanyViewSet(viewsets.ModelViewSet):
             'success': False,
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    def update(self, request, pk=None):
+        """Update existing company"""
+        try:
+            company = self.get_queryset().get(pk=pk)
+            serializer = self.get_serializer(company, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({
+                    'success': True,
+                    'message': 'Company updated successfully',
+                    'data': serializer.data
+                })
+            return Response({
+                'success': False,
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Company.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Company not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+    
+    def destroy(self, request, pk=None):
+        """Delete company"""
+        try:
+            company = self.get_queryset().get(pk=pk)
+            company.delete()
+            return Response({
+                'success': True,
+                'message': 'Company deleted successfully'
+            }, status=status.HTTP_204_NO_CONTENT)
+        except Company.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Company not found'
+            }, status=status.HTTP_404_NOT_FOUND)
