@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import Recruiter
+from users.models import User
+from companies.models import Company
 
 class RecruiterSerializer(serializers.ModelSerializer):
     # Optional: Add user and company details
@@ -16,7 +18,7 @@ class RecruiterSerializer(serializers.ModelSerializer):
     
     def get_user(self, obj):
         """Get user details from users table"""
-        from users.models import User
+        
         try:
             user = User.objects.get(id=obj.user_id)
             return {
@@ -31,7 +33,7 @@ class RecruiterSerializer(serializers.ModelSerializer):
     
     def get_company(self, obj):
         """Get company details from companies table"""
-        from companies.models import Company
+        
         try:
             company = Company.objects.get(id=obj.company_id)
             return {
