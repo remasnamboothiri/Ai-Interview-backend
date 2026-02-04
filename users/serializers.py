@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import User
 from django.contrib.auth.hashers import make_password
+from companies.models import Company
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
@@ -23,7 +24,7 @@ class UserSerializer(serializers.ModelSerializer):
         """
         if obj.company_id:
             try:
-                from companies.models import Company
+                
                 company = Company.objects.get(id=obj.company_id)
                 return company.name
             except Company.DoesNotExist:
