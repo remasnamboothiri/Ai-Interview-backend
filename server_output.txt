@@ -711,3 +711,27 @@ WARNING: This is a development server. Do not use it in a production setting. Us
 For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
 C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
   mw_instance = middleware(adapted_handler)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 05, 2026 - 15:42:58
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
+  mw_instance = middleware(adapted_handler)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 05, 2026 - 16:55:08
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
+  mw_instance = middleware(adapted_handler)
