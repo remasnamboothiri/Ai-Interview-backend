@@ -30,7 +30,8 @@ class Interview(models.Model):
     # Foreign Keys
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='interviews')
     candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, related_name='interviews')
-    recruiter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='scheduled_interviews')
+    #recruiter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='scheduled_interviews')
+    recruiter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='scheduled_interviews', null=True, blank=True)
     agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='interviews')
     
     # Schedule Information
@@ -50,7 +51,9 @@ class Interview(models.Model):
     
     # Audit Fields
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_interviews')
+    #created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_interviews')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_interviews', null=True, blank=True)
+
     created_ip = models.GenericIPAddressField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='updated_interviews', null=True, blank=True)

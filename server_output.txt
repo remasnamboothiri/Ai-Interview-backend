@@ -530,3 +530,184 @@ WARNING: This is a development server. Do not use it in a production setting. Us
 For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
 C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
   mw_instance = middleware(adapted_handler)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 04, 2026 - 16:21:38
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
+  mw_instance = middleware(adapted_handler)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 04, 2026 - 16:30:14
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\base\base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\base\base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\postgresql\base.py", line 332, in get_new_connection
+    connection = self.Database.connect(**conn_params)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: could not translate host name "dpg-d60nq9shg0os73f3cja0-a.oregon-postgres.render.com" to address: Name or service not known
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1043, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 994, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\commands\runserver.py", line 137, in inner_run
+    self.check_migrations()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 587, in check_migrations
+    executor = MigrationExecutor(connections[DEFAULT_DB_ALIAS])
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\executor.py", line 18, in __init__
+    self.loader = MigrationLoader(self.connection)
+                  ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\loader.py", line 58, in __init__
+    self.build_graph()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\loader.py", line 235, in build_graph
+    self.applied_migrations = recorder.applied_migrations()
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\recorder.py", line 89, in applied_migrations
+    if self.has_table():
+       ~~~~~~~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\recorder.py", line 63, in has_table
+    with self.connection.cursor() as cursor:
+         ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\base\base.py", line 320, in cursor
+    return self._cursor()
+           ~~~~~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\base\base.py", line 296, in _cursor
+    self.ensure_connection()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\base\base.py", line 278, in ensure_connection
+    with self.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\base\base.py", line 279, in ensure_connection
+    self.connect()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\base\base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\postgresql\base.py", line 332, in get_new_connection
+    connection = self.Database.connect(**conn_params)
+  File "C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+django.db.utils.OperationalError: could not translate host name "dpg-d60nq9shg0os73f3cja0-a.oregon-postgres.render.com" to address: Name or service not known
+
+Performing system checks...
+
+System check identified no issues (0 silenced).
+C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
+  mw_instance = middleware(adapted_handler)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 05, 2026 - 10:53:53
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
+  mw_instance = middleware(adapted_handler)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 05, 2026 - 10:56:00
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
+  mw_instance = middleware(adapted_handler)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 05, 2026 - 10:56:51
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
+  mw_instance = middleware(adapted_handler)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 05, 2026 - 10:57:19
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
+  mw_instance = middleware(adapted_handler)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 05, 2026 - 14:07:08
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
+  mw_instance = middleware(adapted_handler)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+February 05, 2026 - 15:42:07
+Django version 5.2.3, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\ramas\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\ramas\OneDrive\Desktop\ai-interview-backend\staticfiles\
+  mw_instance = middleware(adapted_handler)

@@ -54,7 +54,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
         return queryset
     
     def perform_create(self, serializer):
-        serializer.save(created_by_id=1)
+        serializer.save()
     
     def perform_update(self, serializer):
         serializer.save()
