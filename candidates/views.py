@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404
 from .models import Candidate
 from users.models import User
 from .serializers import CandidateSerializer
+from activity_logs.models import ActivityLog
+
 
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -58,6 +60,19 @@ def candidate_list_create(request):
         
         if serializer.is_valid():
             candidate = serializer.save(updated_ip=get_client_ip(request))
+            
+            # ✅ ADD THIS: Create activity log
+            ActivityLog.objects.create(
+                user=user if user else None,
+                action='candidate_added',
+                resource_type='Candidate',
+                resource_id=candidate.id,
+                details={'candidate_name': user.full_name, 'email': user.email},
+                ip_address=get_client_ip(request)
+            )
+            
+            
+
             return Response({
                 'success': True,
                 'data': CandidateSerializer(candidate).data,
@@ -85,6 +100,16 @@ def candidate_detail(request, pk):
         
         if serializer.is_valid():
             updated_candidate = serializer.save(updated_ip=get_client_ip(request))
+            
+            # ✅ ADD THIS: Create activity log
+            ActivityLog.objects.create(
+                user=candidate.user if candidate.user else None,
+                action='candidate_updated',
+                resource_type='Candidate',
+                resource_id=candidate.id,
+                details={'candidate_name': candidate.user.full_name if candidate.user else 'Unknown'},
+                ip_address=get_client_ip(request)
+            )
             return Response({
                 'success': True,
                 'data': CandidateSerializer(updated_candidate).data,

@@ -22,7 +22,17 @@ class UserViewSet(viewsets.ModelViewSet):
     def create(self, request):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            user = serializer.save()
+            
+             # ✅ ADD THIS: Create activity log
+            ActivityLog.objects.create(
+                user=user,
+                action='user_registered',
+                resource_type='User',
+                resource_id=user.id,
+                details={'email': user.email, 'user_type': user.user_type},
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
             return Response({
                 'success': True,
                 'message': 'User created successfully',
@@ -52,7 +62,17 @@ class UserViewSet(viewsets.ModelViewSet):
             user = self.get_queryset().get(pk=pk)
             serializer = self.get_serializer(user, data=request.data, partial=True)
             if serializer.is_valid():
-                serializer.save()
+                user = serializer.save()
+                
+                # ✅ ADD THIS: Create activity log
+                ActivityLog.objects.create(
+                    user=user,
+                    action='user_updated',
+                    resource_type='User',
+                    resource_id=user.id,
+                    details={'email': user.email},
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
                 return Response({
                     'success': True,
                     'message': 'User updated successfully',

@@ -5,6 +5,9 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .models import Job
 from .serializers import JobSerializer
+from activity_logs.models import ActivityLog
+from notifications.models import Notification
+
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all()
@@ -38,7 +41,31 @@ class JobViewSet(viewsets.ModelViewSet):
         """POST /api/jobs/ - Create new job"""
         serializer = JobSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            job = serializer.save()
+            
+            
+            # ✅ Create activity log
+            ActivityLog.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                action='job_created',
+                resource_type='Job',
+                resource_id=job.id,
+                details={'job_title': job.title, 'company_id': job.company_id},
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            # ✅ Create notification for recruiter
+            if job.recruiter_id:
+                Notification.objects.create(
+                    user_id=job.recruiter_id,
+                    notification_type='job_created',
+                    title='Job Created Successfully',
+                    message=f'Your job posting "{job.title}" has been created',
+                    related_resource_type='Job',
+                    related_resource_id=job.id,
+                    action_url=f'/jobs/{job.id}',
+                    is_read=False
+                )
             return Response({
                 'success': True,
                 'data': serializer.data
@@ -54,7 +81,29 @@ class JobViewSet(viewsets.ModelViewSet):
             job = Job.objects.get(pk=pk)
             serializer = JobSerializer(job, data=request.data, partial=True)
             if serializer.is_valid():
-                serializer.save()
+                job = serializer.save()
+                
+                
+                # ✅ Create activity log
+                ActivityLog.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
+                    action='job_updated',
+                    resource_type='Job',
+                    resource_id=job.id,
+                    details={'job_title': job.title, 'old_status': old_status, 'new_status': job.status},
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+            
+                # ✅ If job was published, create notification
+                if old_status != 'active' and job.status == 'active':
+                    ActivityLog.objects.create(
+                        user=request.user if request.user.is_authenticated else None,
+                        action='job_published',
+                        resource_type='Job',
+                        resource_id=job.id,
+                        details={'job_title': job.title},
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
                 return Response({
                     'success': True,
                     'data': serializer.data
@@ -73,7 +122,19 @@ class JobViewSet(viewsets.ModelViewSet):
         """DELETE /api/jobs/{id}/ - Delete job"""
         try:
             job = Job.objects.get(pk=pk)
+            job_title = job.title
+            job_id = job.id
             job.delete()
+            
+            # ✅ Create activity log
+            ActivityLog.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                action='job_deleted',
+                resource_type='Job',
+                resource_id=job_id,
+                details={'job_title': job_title},
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
             return Response({
                 'success': True,
                 'message': 'Job deleted successfully'

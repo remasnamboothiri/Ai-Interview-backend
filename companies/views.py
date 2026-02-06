@@ -3,6 +3,8 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .models import Company
 from .serializers import CompanySerializer
+from activity_logs.models import ActivityLog
+
 
 class CompanyViewSet(viewsets.ModelViewSet):
     queryset = Company.objects.all()
@@ -37,7 +39,16 @@ class CompanyViewSet(viewsets.ModelViewSet):
         """Create new company"""
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            company = serializer.save()
+            # ✅ ADD THIS: Create activity log
+            ActivityLog.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                action='company_created',
+                resource_type='Company',
+                resource_id=company.id,
+                details={'company_name': company.name},
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
             return Response({
                 'success': True,
                 'message': 'Company created successfully',
@@ -55,6 +66,16 @@ class CompanyViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(company, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
+                
+                # ✅ ADD THIS: Create activity log
+                ActivityLog.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
+                    action='company_updated',
+                    resource_type='Company',
+                    resource_id=company.id,
+                    details={'company_name': company.name},
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
                 return Response({
                     'success': True,
                     'message': 'Company updated successfully',
@@ -74,7 +95,19 @@ class CompanyViewSet(viewsets.ModelViewSet):
         """Delete company"""
         try:
             company = self.get_queryset().get(pk=pk)
+            company_name = company.name
+            company_id = company.id 
             company.delete()
+            
+            # ✅ ADD THIS: Create activity log
+            ActivityLog.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                action='company_deleted',
+                resource_type='Company',
+                resource_id=company_id,
+                details={'company_name': company_name},
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
             return Response({
                 'success': True,
                 'message': 'Company deleted successfully'

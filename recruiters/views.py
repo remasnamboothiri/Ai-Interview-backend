@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Recruiter
 from .serializers import RecruiterSerializer
+from activity_logs.models import ActivityLog
+
 
 class RecruiterViewSet(viewsets.ModelViewSet):
     queryset = Recruiter.objects.all()
@@ -51,7 +53,21 @@ class RecruiterViewSet(viewsets.ModelViewSet):
         """Create new recruiter (link user to company)"""
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            recruiter = serializer.save()
+            # ✅ ADD THIS: Create activity log
+            ActivityLog.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                action='recruiter_added',
+                resource_type='Recruiter',
+                resource_id=recruiter.id,
+                details={
+                    'user_id': recruiter.user_id,
+                    'company_id': recruiter.company_id
+                },
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            
             return Response({
                 'success': True,
                 'message': 'Recruiter created successfully',
@@ -88,7 +104,23 @@ class RecruiterViewSet(viewsets.ModelViewSet):
         """Delete recruiter"""
         try:
             recruiter = self.get_queryset().get(pk=pk)
+            recruiter_id = recruiter.id
+            user_id = recruiter.user_id
+            company_id = recruiter.company_id
             recruiter.delete()
+            
+            # ✅ ADD THIS: Create activity log
+            ActivityLog.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                action='recruiter_removed',
+                resource_type='Recruiter',
+                resource_id=recruiter_id,
+                details={
+                    'user_id': user_id,
+                    'company_id': company_id
+                },
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
             return Response({
                 'success': True,
                 'message': 'Recruiter deleted successfully'
