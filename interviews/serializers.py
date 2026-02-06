@@ -1,9 +1,39 @@
 from rest_framework import serializers
 from .models import Interview
-from jobs.serializers import JobSerializer 
-from candidates.serializers import CandidateSerializer
-from agents.serializers import AgentSerializer
-from users.serializers import UserSerializer
+from jobs.models import Job
+from candidates.models import Candidate
+from agents.models import Agent
+from users.models import User
+from companies.models import Company
+
+class NestedUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'full_name']
+
+class NestedCompanySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Company
+        fields = ['id', 'name']
+
+class NestedJobSerializer(serializers.ModelSerializer):
+    company = NestedCompanySerializer(read_only=True)
+    
+    class Meta:
+        model = Job
+        fields = ['id', 'title', 'company']
+
+class NestedCandidateSerializer(serializers.ModelSerializer):
+    user = NestedUserSerializer(read_only=True)
+    
+    class Meta:
+        model = Candidate
+        fields = ['id', 'user']
+
+class NestedAgentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Agent
+        fields = ['id', 'name']
 
 class InterviewSerializer(serializers.ModelSerializer):
     # Read-only fields for display
@@ -28,13 +58,13 @@ class InterviewSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'uuid', 'created_at', 'updated_at', 'email_sent_at']
 
 class InterviewDetailSerializer(serializers.ModelSerializer):
-    job = JobSerializer(read_only=True)
-    candidate = CandidateSerializer(read_only=True)
-    agent = AgentSerializer(read_only=True)
-    recruiter = UserSerializer(read_only=True)
-    created_by = UserSerializer(read_only=True)
-    updated_by = UserSerializer(read_only=True)
-    cancelled_by = UserSerializer(read_only=True)
+    job = NestedJobSerializer(read_only=True)
+    candidate = NestedCandidateSerializer(read_only=True)
+    agent = NestedAgentSerializer(read_only=True)
+    recruiter = NestedUserSerializer(read_only=True)
+    created_by = NestedUserSerializer(read_only=True)
+    updated_by = NestedUserSerializer(read_only=True)
+    cancelled_by = NestedUserSerializer(read_only=True)
     
     class Meta:
         model = Interview
