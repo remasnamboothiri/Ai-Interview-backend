@@ -68,7 +68,7 @@ INSTALLED_APPS = [
     
     'system_settings',
     
-    'djangorestframework-simplejwt',
+    
 ]
 
 MIDDLEWARE = [
