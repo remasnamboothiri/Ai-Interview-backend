@@ -22,7 +22,7 @@ from system_settings import urls as system_setting_urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/companies/', include('companies.urls')),
+    path('api/companies/', include('companies.urls')), 
     path('api/', include('users.urls')),      # User app urls
     path('api/subscriptions/', include('subscriptions.urls')),
     path('api/recruiters/', include('recruiters.urls')), 

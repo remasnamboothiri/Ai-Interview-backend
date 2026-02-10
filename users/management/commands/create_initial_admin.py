@@ -15,14 +15,21 @@ class Command(BaseCommand):
         # Only create if environment variables are set
         if not admin_email or not admin_password:
             self.stdout.write(self.style.WARNING(
-                '⚠️  ADMIN_EMAIL and ADMIN_PASSWORD not set in environment variables. Skipping admin creation.'
+                'ADMIN_EMAIL and ADMIN_PASSWORD not set in environment variables. Skipping admin creation.'
             ))
             return
         
         # Check if admin already exists
         if User.objects.filter(email=admin_email).exists():
+            # UPDATE the existing admin password
+            admin = User.objects.get(email=admin_email)
+            admin.password_hash = make_password(admin_password)
+            admin.full_name = admin_name
+            admin.is_active = True
+            admin.is_email_verified = True
+            admin.save()
             self.stdout.write(self.style.SUCCESS(
-                f'✅ Admin user {admin_email} already exists. Skipping.'
+                f'Admin user {admin_email} password updated successfully.'
             ))
             return
         
@@ -37,5 +44,5 @@ class Command(BaseCommand):
         )
         
         self.stdout.write(self.style.SUCCESS(
-            f'✅ Admin user created: {admin_email}'
+            f'Admin user created: {admin_email}'
         ))
