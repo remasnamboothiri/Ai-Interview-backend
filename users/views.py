@@ -10,6 +10,7 @@ from .models import User
 from .serializers import UserSerializer
 from activity_logs.models import ActivityLog
 
+
 # ============================================
 # AUTHENTICATION ENDPOINTS
 # ============================================
@@ -69,9 +70,8 @@ def login_view(request):
         user.save()
         
         # Generate JWT tokens
-        refresh = RefreshToken.for_user(user)
-        
-        # Add custom claims to token
+        refresh = RefreshToken()
+        refresh['user_id'] = user.id
         refresh['email'] = user.email
         refresh['user_type'] = user.user_type
         
@@ -208,48 +208,6 @@ def current_user_view(request):
         'success': True,
         'data': serializer.data
     }, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def reset_admin_password_view(request):
-    """
-    TEMPORARY: Reset admin password from .env file
-    This endpoint will be removed after fixing the password issue
-    """
-    from decouple import config
-    
-    # Security: Only allow if a secret key is provided
-    secret = request.data.get('secret')
-    if secret != 'reset-admin-2024':
-        return Response({
-            'success': False,
-            'message': 'Unauthorized'
-        }, status=status.HTTP_403_FORBIDDEN)
-    
-    try:
-        admin_email = config('ADMIN_EMAIL', default='ramasnampoothiry@gmail.com')
-        admin_password = config('ADMIN_PASSWORD', default='rama@admin123')
-        
-        admin = User.objects.get(email=admin_email)
-        admin.password_hash = make_password(admin_password)
-        admin.save()
-        
-        return Response({
-            'success': True,
-            'message': f'Admin password reset successfully for {admin_email}'
-        }, status=status.HTTP_200_OK)
-        
-    except User.DoesNotExist:
-        return Response({
-            'success': False,
-            'message': 'Admin user not found'
-        }, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({
-            'success': False,
-            'message': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ============================================
