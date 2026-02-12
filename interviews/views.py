@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from .models import Interview
+import logging
 
 from activity_logs.models import ActivityLog
 from notifications.models import Notification
@@ -16,6 +17,8 @@ from .serializers import (
     InterviewCreateSerializer,
     InterviewUpdateSerializer
 )
+
+logger = logging.getLogger(__name__)
 
 class InterviewViewSet(viewsets.ModelViewSet):
     queryset = Interview.objects.all()
@@ -36,10 +39,17 @@ class InterviewViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         try:
-            queryset = Interview.objects.select_related(
-                'job', 'candidate', 'candidate__user', 'agent', 'recruiter',
-                'job__company', 'created_by'
-            )
+            # Start with basic queryset
+            queryset = Interview.objects.all()
+            
+            # Try to optimize with select_related, but catch any errors
+            try:
+                queryset = queryset.select_related(
+                    'job', 'candidate', 'candidate__user', 'agent', 'recruiter',
+                    'job__company', 'created_by'
+                )
+            except Exception as e:
+                logger.warning(f"Could not use select_related: {e}")
             
             # Filter by status if provided
             status_param = self.request.query_params.get('status')
@@ -56,12 +66,27 @@ class InterviewViewSet(viewsets.ModelViewSet):
             if candidate_id:
                 queryset = queryset.filter(candidate_id=candidate_id)
             
+            logger.info(f"Returning queryset with {queryset.count()} interviews")
             return queryset
         except Exception as e:
-            print(f"Error in get_queryset: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"Error in get_queryset: {e}")
+            logger.exception("Full traceback:")
             return Interview.objects.none()
+    
+    def create(self, request, *args, **kwargs):
+        """Override create to add detailed error logging"""
+        try:
+            logger.info(f"Creating interview with data: {request.data}")
+            logger.info(f"User: {request.user}")
+            logger.info(f"User has pk: {hasattr(request.user, 'pk') and request.user.pk}")
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error creating interview: {str(e)}")
+            logger.exception("Full traceback:")
+            return Response(
+                {'error': str(e), 'detail': 'Failed to create interview'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     def perform_create(self, serializer):
         try:
@@ -69,8 +94,9 @@ class InterviewViewSet(viewsets.ModelViewSet):
             
             # ✅ Create activity log
             try:
+                user = self.request.user if self.request.user and self.request.user.pk else None
                 ActivityLog.objects.create(
-                    user=self.request.user if self.request.user.is_authenticated else None,
+                    user=user,
                     action='interview_scheduled',
                     resource_type='Interview',
                     resource_id=interview.id,
@@ -126,8 +152,9 @@ class InterviewViewSet(viewsets.ModelViewSet):
         
         # ✅ Create activity log for interview update
         try:
+            user = self.request.user if self.request.user and self.request.user.pk else None
             ActivityLog.objects.create(
-                user=self.request.user if self.request.user.is_authenticated else None,
+                user=user,
                 action='interview_updated',
                 resource_type='Interview',
                 resource_id=interview.id,
@@ -144,8 +171,9 @@ class InterviewViewSet(viewsets.ModelViewSet):
         # ✅ If interview is completed, create activity log
         if interview.status == 'completed':
             try:
+                user = self.request.user if self.request.user and self.request.user.pk else None
                 ActivityLog.objects.create(
-                    user=self.request.user if self.request.user.is_authenticated else None,
+                    user=user,
                     action='interview_completed',
                     resource_type='Interview',
                     resource_id=interview.id,
@@ -184,14 +212,15 @@ class InterviewViewSet(viewsets.ModelViewSet):
         
         interview.status = 'cancelled'
         interview.cancelled_at = timezone.now()
-        interview.cancelled_by = request.user if request.user.is_authenticated else None
+        interview.cancelled_by = request.user if request.user and request.user.pk else None
         interview.cancellation_reason = request.data.get('cancellation_reason', '')
         interview.save()
         
         # ✅ Create activity log
         try:
+            user = request.user if request.user and request.user.pk else None
             ActivityLog.objects.create(
-                user=request.user if request.user.is_authenticated else None,
+                user=user,
                 action='interview_cancelled',
                 resource_type='Interview',
                 resource_id=interview.id,
@@ -252,13 +281,14 @@ class InterviewViewSet(viewsets.ModelViewSet):
         
         old_time = interview.scheduled_at
         interview.scheduled_at = new_time
-        interview.updated_by = request.user if request.user.is_authenticated else None
+        interview.updated_by = request.user if request.user and request.user.pk else None
         interview.save()
         
         # ✅ Create activity log
         try:
+            user = request.user if request.user and request.user.pk else None
             ActivityLog.objects.create(
-                user=request.user if request.user.is_authenticated else None,
+                user=user,
                 action='interview_rescheduled',
                 resource_type='Interview',
                 resource_id=interview.id,
@@ -307,6 +337,16 @@ class InterviewViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(interview)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def test(self, request):
+        """Test endpoint to verify API is working"""
+        return Response({
+            'status': 'ok',
+            'user_has_pk': hasattr(request.user, 'pk') and request.user.pk is not None,
+            'user': str(request.user),
+            'interview_count': Interview.objects.count()
+        })
     
     @action(detail=False, methods=['get'])
     def upcoming(self, request):

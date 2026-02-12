@@ -106,11 +106,17 @@ class InterviewCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Get user from request context - handle case where user might be None
         request = self.context.get('request')
-        if request and hasattr(request, 'user') and request.user.is_authenticated:
-            validated_data['created_by'] = request.user
-            validated_data['recruiter'] = request.user
+        if request and hasattr(request, 'user'):
+            user = request.user
+            # Check if user is authenticated (works for both Django User and custom User)
+            if user and user.pk:
+                validated_data['created_by'] = user
+                validated_data['recruiter'] = user
+            else:
+                # If user is not authenticated, set fields to None (allowed by model)
+                validated_data['created_by'] = None
+                validated_data['recruiter'] = None
         else:
-            # If user is not authenticated, set fields to None (allowed by model)
             validated_data['created_by'] = None
             validated_data['recruiter'] = None
         return super().create(validated_data)
