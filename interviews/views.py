@@ -35,79 +35,91 @@ class InterviewViewSet(viewsets.ModelViewSet):
         return InterviewSerializer
     
     def get_queryset(self):
-        queryset = Interview.objects.select_related(
-            'job', 'candidate', 'candidate__user', 'agent', 'recruiter',
-            'job__company', 'created_by'
-        )
-        
-        # Filter by status if provided
-        status_param = self.request.query_params.get('status')
-        if status_param:
-            queryset = queryset.filter(status=status_param)
-        
-        # Filter by job if provided
-        job_id = self.request.query_params.get('job')
-        if job_id:
-            queryset = queryset.filter(job_id=job_id)
-        
-        # Filter by candidate if provided
-        candidate_id = self.request.query_params.get('candidate')
-        if candidate_id:
-            queryset = queryset.filter(candidate_id=candidate_id)
-        
-        return queryset
+        try:
+            queryset = Interview.objects.select_related(
+                'job', 'candidate', 'candidate__user', 'agent', 'recruiter',
+                'job__company', 'created_by'
+            )
+            
+            # Filter by status if provided
+            status_param = self.request.query_params.get('status')
+            if status_param:
+                queryset = queryset.filter(status=status_param)
+            
+            # Filter by job if provided
+            job_id = self.request.query_params.get('job')
+            if job_id:
+                queryset = queryset.filter(job_id=job_id)
+            
+            # Filter by candidate if provided
+            candidate_id = self.request.query_params.get('candidate')
+            if candidate_id:
+                queryset = queryset.filter(candidate_id=candidate_id)
+            
+            return queryset
+        except Exception as e:
+            print(f"Error in get_queryset: {e}")
+            import traceback
+            traceback.print_exc()
+            return Interview.objects.none()
     
     def perform_create(self, serializer):
-        interview = serializer.save()
-        
-        # ✅ Create activity log
         try:
-            ActivityLog.objects.create(
-                user=self.request.user if self.request.user.is_authenticated else None,
-                action='interview_scheduled',
-                resource_type='Interview',
-                resource_id=interview.id,
-                details={
-                    'candidate_name': interview.candidate.user.full_name if interview.candidate and interview.candidate.user else 'Unknown',
-                    'job_title': interview.job.title if interview.job else 'Unknown',
-                    'scheduled_at': str(interview.scheduled_at)
-                },
-                ip_address=self.request.META.get('REMOTE_ADDR')
-            )
-        except Exception as e:
-            print(f"Error creating activity log: {e}")
-        
-        # ✅ Create notification for candidate
-        try:
-            if interview.candidate and interview.candidate.user:
-                Notification.objects.create(
-                    user=interview.candidate.user,
-                    notification_type='interview_scheduled',
-                    title='Interview Scheduled',
-                    message=f'Your interview for {interview.job.title} has been scheduled for {interview.scheduled_at.strftime("%B %d, %Y at %I:%M %p")}',
-                    related_resource_type='Interview',
-                    related_resource_id=interview.id,
-                    action_url=f'/interviews/{interview.id}',
-                    is_read=False
+            interview = serializer.save()
+            
+            # ✅ Create activity log
+            try:
+                ActivityLog.objects.create(
+                    user=self.request.user if self.request.user.is_authenticated else None,
+                    action='interview_scheduled',
+                    resource_type='Interview',
+                    resource_id=interview.id,
+                    details={
+                        'candidate_name': interview.candidate.user.full_name if interview.candidate and interview.candidate.user else 'Unknown',
+                        'job_title': interview.job.title if interview.job else 'Unknown',
+                        'scheduled_at': str(interview.scheduled_at)
+                    },
+                    ip_address=self.request.META.get('REMOTE_ADDR')
                 )
+            except Exception as e:
+                print(f"Error creating activity log: {e}")
+            
+            # ✅ Create notification for candidate
+            try:
+                if interview.candidate and interview.candidate.user:
+                    Notification.objects.create(
+                        user=interview.candidate.user,
+                        notification_type='interview_scheduled',
+                        title='Interview Scheduled',
+                        message=f'Your interview for {interview.job.title} has been scheduled for {interview.scheduled_at.strftime("%B %d, %Y at %I:%M %p")}',
+                        related_resource_type='Interview',
+                        related_resource_id=interview.id,
+                        action_url=f'/interviews/{interview.id}',
+                        is_read=False
+                    )
+            except Exception as e:
+                print(f"Error creating candidate notification: {e}")
+            
+            # ✅ Create notification for recruiter
+            try:
+                if interview.recruiter:
+                    Notification.objects.create(
+                        user=interview.recruiter,
+                        notification_type='interview_scheduled',
+                        title='Interview Scheduled',
+                        message=f'Interview scheduled with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title}',
+                        related_resource_type='Interview',
+                        related_resource_id=interview.id,
+                        action_url=f'/interviews/{interview.id}',
+                        is_read=False
+                    )
+            except Exception as e:
+                print(f"Error creating recruiter notification: {e}")
         except Exception as e:
-            print(f"Error creating candidate notification: {e}")
-        
-        # ✅ Create notification for recruiter
-        try:
-            if interview.recruiter:
-                Notification.objects.create(
-                    user=interview.recruiter,
-                    notification_type='interview_scheduled',
-                    title='Interview Scheduled',
-                    message=f'Interview scheduled with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title}',
-                    related_resource_type='Interview',
-                    related_resource_id=interview.id,
-                    action_url=f'/interviews/{interview.id}',
-                    is_read=False
-                )
-        except Exception as e:
-            print(f"Error creating recruiter notification: {e}")
+            print(f"Error in perform_create: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
     
     def perform_update(self, serializer):
         interview = serializer.save()

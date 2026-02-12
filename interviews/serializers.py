@@ -37,12 +37,12 @@ class NestedAgentSerializer(serializers.ModelSerializer):
 
 class InterviewSerializer(serializers.ModelSerializer):
     # Read-only fields for display
-    job_title = serializers.CharField(source='job.title', read_only=True)
-    candidate_name = serializers.CharField(source='candidate.user.full_name', read_only=True)
-    candidate_email = serializers.CharField(source='candidate.user.email', read_only=True)
-    agent_name = serializers.CharField(source='agent.name', read_only=True)
-    recruiter_name = serializers.CharField(source='recruiter.full_name', read_only=True)
-    company_name = serializers.CharField(source='job.company.name', read_only=True)
+    job_title = serializers.CharField(source='job.title', read_only=True, allow_null=True)
+    candidate_name = serializers.SerializerMethodField()
+    candidate_email = serializers.SerializerMethodField()
+    agent_name = serializers.CharField(source='agent.name', read_only=True, allow_null=True)
+    recruiter_name = serializers.SerializerMethodField()
+    company_name = serializers.SerializerMethodField()
     
     class Meta:
         model = Interview
@@ -56,6 +56,30 @@ class InterviewSerializer(serializers.ModelSerializer):
             'recruiter_name', 'company_name'
         ]
         read_only_fields = ['id', 'uuid', 'created_at', 'updated_at', 'email_sent_at']
+    
+    def get_candidate_name(self, obj):
+        try:
+            return obj.candidate.user.full_name if obj.candidate and obj.candidate.user else None
+        except:
+            return None
+    
+    def get_candidate_email(self, obj):
+        try:
+            return obj.candidate.user.email if obj.candidate and obj.candidate.user else None
+        except:
+            return None
+    
+    def get_recruiter_name(self, obj):
+        try:
+            return obj.recruiter.full_name if obj.recruiter else None
+        except:
+            return None
+    
+    def get_company_name(self, obj):
+        try:
+            return obj.job.company.name if obj.job and obj.job.company else None
+        except:
+            return None
 
 class InterviewDetailSerializer(serializers.ModelSerializer):
     job = NestedJobSerializer(read_only=True)
