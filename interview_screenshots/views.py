@@ -10,6 +10,12 @@ from .models import InterviewScreenshot
 from .serializers import InterviewScreenshotSerializer, InterviewScreenshotCreateSerializer
 from interviews.models import Interview
 
+import os
+import time
+from django.conf import settings
+from .face_analyzer import FaceAnalyzer
+
+
 
 class InterviewScreenshotViewSet(viewsets.ModelViewSet):
     """
@@ -90,3 +96,104 @@ class InterviewScreenshotViewSet(viewsets.ModelViewSet):
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+    
+    
+    @action(detail=False, methods=['post'])
+    def upload(self, request):
+        """
+        Upload and analyze screenshot
+    
+        Expected data:
+        - webcam_image: Image file from webcam
+        - interview: Interview ID
+        - screenshot_number: Sequential number
+        """
+        try:
+            # Get uploaded file
+            webcam_file = request.FILES.get('webcam_image')
+            if not webcam_file:
+                return Response(
+                    {'error': 'No webcam_image file provided'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+            # Get interview ID
+            interview_id = request.data.get('interview')
+            if not interview_id:
+                return Response(
+                    {'error': 'interview ID is required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+            # Get screenshot number
+            screenshot_number = request.data.get('screenshot_number', 1)
+        
+            # Validate interview exists
+            interview = get_object_or_404(Interview, id=interview_id)
+        
+            # Save file to disk
+            file_url = self._save_screenshot_file(webcam_file, interview_id)
+        
+            # Analyze image with AI
+            analyzer = FaceAnalyzer()
+            analysis_result = analyzer.analyze_image(webcam_file)
+        
+            # Create database record
+            screenshot = InterviewScreenshot.objects.create(
+                interview=interview,
+                screenshot_url=file_url,
+                screenshot_number=screenshot_number,
+                face_count=analysis_result['face_count'],
+                multiple_people_detected=analysis_result['multiple_people_detected'],
+                issue_type=analysis_result['issue_type'],
+                confidence_score=analysis_result['confidence_score'],
+                created_ip=self._get_client_ip(request),
+                metadata={
+                    'analysis_success': analysis_result['success'],
+                    'file_size': webcam_file.size,
+                    'content_type': webcam_file.content_type
+                }
+            )
+        
+            # Return response
+            serializer = self.get_serializer(screenshot)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def _save_screenshot_file(self, file, interview_id):
+        """Save uploaded file to media/screenshots/ folder"""
+        # Create screenshots directory if it doesn't exist
+        screenshots_dir = os.path.join(settings.MEDIA_ROOT, 'screenshots', str(interview_id))
+        os.makedirs(screenshots_dir, exist_ok=True)
+    
+        # Generate unique filename
+        timestamp = int(time.time() * 1000)  # milliseconds
+        filename = f"screenshot_{timestamp}_{file.name}"
+        filepath = os.path.join(screenshots_dir, filename)
+    
+        # Save file
+        with open(filepath, 'wb+') as destination:
+            for chunk in file.chunks():
+                destination.write(chunk)
+    
+        # Return URL path (not full system path)
+        return f"/media/screenshots/{interview_id}/{filename}"
+
+    def _get_client_ip(self, request):
+        """Get client IP address from request"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+
+    
+    
+    
+    

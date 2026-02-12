@@ -85,6 +85,10 @@ class InterviewCreateSerializer(serializers.ModelSerializer):
         if request and hasattr(request, 'user') and request.user.is_authenticated:
             validated_data['created_by'] = request.user
             validated_data['recruiter'] = request.user
+        else:
+            # If user is not authenticated, set fields to None (allowed by model)
+            validated_data['created_by'] = None
+            validated_data['recruiter'] = None
         return super().create(validated_data)
 
 class InterviewUpdateSerializer(serializers.ModelSerializer):

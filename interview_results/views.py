@@ -9,6 +9,12 @@ from django.utils import timezone
 from .models import InterviewResult
 from .serializers import InterviewResultSerializer, InterviewResultCreateSerializer, InterviewResultUpdateSerializer
 
+
+from interview_screenshots.models import InterviewScreenshot
+from django.conf import settings
+from .report_generator import InterviewReportGenerator
+
+
 class InterviewResultViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
@@ -61,3 +67,42 @@ class InterviewResultViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         except InterviewResult.DoesNotExist:
             return Response({'error': 'Result not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+        
+        
+    def create(self, request, *args, **kwargs):
+        """Create interview result with proctoring check"""
+        # Get interview ID from request
+        interview_id = request.data.get('interview')
+    
+        # Check for proctoring violations
+        violation_count = InterviewScreenshot.objects.filter(
+            interview_id=interview_id,
+            multiple_people_detected=True
+        ).count()
+    
+        # Auto-fail if threshold exceeded
+        if violation_count >= settings.AUTO_FAIL_THRESHOLD:
+            request.data['recommendation'] = 'reject'
+            if 'red_flags' not in request.data:
+                request.data['red_flags'] = []
+            request.data['red_flags'].append(
+                f"Auto-failed: {violation_count} proctoring violations detected"
+            )
+    
+        # Create result
+        response = super().create(request, *args, **kwargs)
+    
+        # Generate report with screenshots
+        if response.status_code == 201:
+            result_id = response.data['id']
+            result = self.get_queryset().get(id=result_id)
+        
+            generator = InterviewReportGenerator()
+            pdf_path = generator.generate_report(result)
+        
+            response.data['report_path'] = pdf_path
+    
+        return response
+

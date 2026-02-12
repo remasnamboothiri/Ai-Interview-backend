@@ -221,3 +221,14 @@ SIMPLE_JWT = {
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:5173,http://localhost:3000', cast=lambda v: [s.strip() for s in v.split(',')])
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_HTTPONLY = False
+
+
+
+# Media Files Configuration (for storing screenshots locally)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Screenshot Settings
+SCREENSHOT_INTERVAL_SECONDS = 10  # Capture every 10 seconds
+MAX_SCREENSHOTS_IN_REPORT = 10    # Include max 10 in report
+AUTO_FAIL_THRESHOLD = 3           # Auto-fail if 3+ violations
