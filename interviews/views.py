@@ -93,72 +93,80 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    def perform_create(self, serializer):
-        try:
-            interview = serializer.save()
-            
-            # ✅ Create activity log
+        def perform_create(self, serializer):
+            from threading import Thread
+        
             try:
-                user = self.request.user if self.request.user and self.request.user.pk else None
-                ActivityLog.objects.create(
-                    user=user,
-                    action='interview_scheduled',
-                    resource_type='Interview',
-                    resource_id=interview.id,
-                    details={
-                        'candidate_name': interview.candidate.user.full_name if interview.candidate and interview.candidate.user else 'Unknown',
-                        'job_title': interview.job.title if interview.job else 'Unknown',
-                        'scheduled_at': str(interview.scheduled_at)
-                    },
-                    ip_address=self.request.META.get('REMOTE_ADDR')
-                )
-            except Exception as e:
-                print(f"Error creating activity log: {e}")
+                interview = serializer.save()
             
-            # ✅ Create notification for candidate
-            try:
-                if interview.candidate and interview.candidate.user:
-                    Notification.objects.create(
-                        user=interview.candidate.user,
-                        notification_type='interview_scheduled',
-                        title='Interview Scheduled',
-                        message=f'Your interview for {interview.job.title} has been scheduled for {interview.scheduled_at.strftime("%B %d, %Y at %I:%M %p")}',
-                        related_resource_type='Interview',
-                        related_resource_id=interview.id,
-                        action_url=f'/interviews/{interview.id}',
-                        is_read=False
+                # ✅ Create activity log
+                try:
+                    user = self.request.user if self.request.user and self.request.user.pk else None
+                    ActivityLog.objects.create(
+                        user=user,
+                        action='interview_scheduled',
+                        resource_type='Interview',
+                        resource_id=interview.id,
+                        details={
+                            'candidate_name': interview.candidate.user.full_name if interview.candidate and interview.candidate.user else 'Unknown',
+                            'job_title': interview.job.title if interview.job else 'Unknown',
+                            'scheduled_at': str(interview.scheduled_at)
+                        },
+                        ip_address=self.request.META.get('REMOTE_ADDR')
                     )
-            except Exception as e:
-                print(f"Error creating candidate notification: {e}")
+                except Exception as e:
+                    print(f"Error creating activity log: {e}")
             
-            # ✅ Create notification for recruiter
-            try:
-                if interview.recruiter:
-                    Notification.objects.create(
-                        user=interview.recruiter,
-                        notification_type='interview_scheduled',
-                        title='Interview Scheduled',
-                        message=f'Interview scheduled with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title}',
-                        related_resource_type='Interview',
-                        related_resource_id=interview.id,
-                        action_url=f'/interviews/{interview.id}',
-                        is_read=False
-                    )
-            except Exception as e:
-                print(f"Error creating recruiter notification: {e}")
+                # ✅ Create notification for candidate
+                try:
+                    if interview.candidate and interview.candidate.user:
+                        Notification.objects.create(
+                            user=interview.candidate.user,
+                            notification_type='interview_scheduled',
+                            title='Interview Scheduled',
+                            message=f'Your interview for {interview.job.title} has been scheduled for {interview.scheduled_at.strftime("%B %d, %Y at %I:%M %p")}',
+                            related_resource_type='Interview',
+                            related_resource_id=interview.id,
+                            action_url=f'/interviews/{interview.id}',
+                            is_read=False
+                        )
+                except Exception as e:
+                    print(f"Error creating candidate notification: {e}")
             
-            # ✅ Send interview invitation email
-            try:
-                InterviewEmailService.send_interview_invitation(interview.id)
-                logger.info(f"Interview invitation email sent for interview {interview.id}")
+                # ✅ Create notification for recruiter
+                try:
+                    if interview.recruiter:
+                        Notification.objects.create(
+                            user=interview.recruiter,
+                            notification_type='interview_scheduled',
+                            title='Interview Scheduled',
+                            message=f'Interview scheduled with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title}',
+                            related_resource_type='Interview',
+                            related_resource_id=interview.id,
+                            action_url=f'/interviews/{interview.id}',
+                            is_read=False
+                        )
+                except Exception as e:
+                    print(f"Error creating recruiter notification: {e}")
+            
+                # ✅ Send interview invitation email IN BACKGROUND THREAD
+                def send_email_async():
+                    try:
+                        InterviewEmailService.send_interview_invitation(interview.id)
+                        logger.info(f"Interview invitation email sent for interview {interview.id}")
+                    except Exception as e:
+                        logger.error(f"Error sending interview invitation email: {e}")
+                        print(f"Error sending interview invitation email: {e}")
+            
+                # Start email sending in background thread to avoid timeout
+                Thread(target=send_email_async, daemon=True).start()
+            
             except Exception as e:
-                logger.error(f"Error sending interview invitation email: {e}")
-                print(f"Error sending interview invitation email: {e}")
-        except Exception as e:
-            print(f"Error in perform_create: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+                print(f"Error in perform_create: {e}")
+                import traceback
+                traceback.print_exc()
+                raise
+
     
     def perform_update(self, serializer):
         interview = serializer.save()

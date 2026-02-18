@@ -39,6 +39,21 @@ class User(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     last_login_at = models.DateTimeField(blank=True, null=True)
     
+    # ADD THESE TWO PROPERTIES (NEW CODE)
+    @property
+    def is_authenticated(self):
+        """
+        Always return True. This is a way to tell if the user has been authenticated.
+        """
+        return True
+    
+    @property
+    def is_anonymous(self):
+        """
+        Always return False. This is a way to tell if the user is anonymous.
+        """
+        return False
+    
     class Meta:
         db_table = 'users'
         ordering = ['-created_at']
