@@ -10,6 +10,7 @@ import logging
 
 from activity_logs.models import ActivityLog
 from notifications.models import Notification
+from interview_data.models import InterviewConversation
 
 from .serializers import (
     InterviewSerializer,
@@ -17,6 +18,10 @@ from .serializers import (
     InterviewCreateSerializer,
     InterviewUpdateSerializer
 )
+
+# Import AI Interview Service
+from .ai_interview_service import AIInterviewService
+from .email_service import InterviewEmailService
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +146,14 @@ class InterviewViewSet(viewsets.ModelViewSet):
                     )
             except Exception as e:
                 print(f"Error creating recruiter notification: {e}")
+            
+            # ✅ Send interview invitation email
+            try:
+                InterviewEmailService.send_interview_invitation(interview.id)
+                logger.info(f"Interview invitation email sent for interview {interview.id}")
+            except Exception as e:
+                logger.error(f"Error sending interview invitation email: {e}")
+                print(f"Error sending interview invitation email: {e}")
         except Exception as e:
             print(f"Error in perform_create: {e}")
             import traceback
@@ -386,3 +399,185 @@ class InterviewViewSet(viewsets.ModelViewSet):
         interviews = self.get_queryset().filter(candidate_id=candidate_id)
         serializer = self.get_serializer(interviews, many=True)
         return Response(serializer.data)
+    
+    # ========================================
+    # AI INTERVIEW ENDPOINTS
+    # ========================================
+    
+    @action(detail=True, methods=['post'])
+    def start_interview(self, request, pk=None):
+        """
+        Start AI interview - Initialize conversation and return first question
+        POST /api/interviews/{id}/start_interview/
+        """
+        try:
+            interview = self.get_object()
+            
+            # Check if interview is scheduled
+            if interview.status != 'scheduled':
+                return Response(
+                    {'error': f'Interview cannot be started. Current status: {interview.status}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Update interview status to in_progress
+            interview.status = 'in_progress'
+            interview.save()
+            
+            # Initialize AI Interview Service
+            ai_service = AIInterviewService(interview.id)
+            
+            # Start interview and get first question
+            result = ai_service.start_interview()
+            
+            # Save AI's first message to interview_conversations
+            InterviewConversation.objects.create(
+                interview=interview,
+                speaker='ai',
+                message=result['message']
+            )
+            
+            logger.info(f"Interview {interview.id} started successfully")
+            
+            return Response({
+                'success': True,
+                'interview_id': interview.id,
+                'status': interview.status,
+                **result
+            })
+            
+        except Interview.DoesNotExist:
+            return Response(
+                {'error': 'Interview not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error starting interview: {str(e)}")
+            return Response(
+                {'error': f'Failed to start interview: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def send_message(self, request, pk=None):
+        """
+        Send candidate's answer and get AI's response
+        POST /api/interviews/{id}/send_message/
+        Body: {"message": "candidate's answer"}
+        """
+        try:
+            interview = self.get_object()
+            
+            # Check if interview is in progress
+            if interview.status != 'in_progress':
+                return Response(
+                    {'error': f'Interview is not in progress. Current status: {interview.status}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get candidate's message
+            candidate_message = request.data.get('message')
+            if not candidate_message:
+                return Response(
+                    {'error': 'message field is required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Save candidate's message
+            InterviewConversation.objects.create(
+                interview=interview,
+                speaker='candidate',
+                message=candidate_message
+            )
+            
+            # Get AI response
+            ai_service = AIInterviewService(interview.id)
+            result = ai_service.send_message(candidate_message)
+            
+            # Save AI's response
+            InterviewConversation.objects.create(
+                interview=interview,
+                speaker='ai',
+                message=result['message']
+            )
+            
+            # If interview is complete, update status
+            if result.get('is_complete'):
+                interview.status = 'completed'
+                interview.save()
+                logger.info(f"Interview {interview.id} completed")
+            
+            return Response({
+                'success': True,
+                'interview_id': interview.id,
+                **result
+            })
+            
+        except Interview.DoesNotExist:
+            return Response(
+                {'error': 'Interview not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error processing message: {str(e)}")
+            return Response(
+                {'error': f'Failed to process message: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def end_interview(self, request, pk=None):
+        """
+        End the interview
+        POST /api/interviews/{id}/end_interview/
+        """
+        try:
+            interview = self.get_object()
+            
+            # Update interview status
+            if interview.status == 'in_progress':
+                interview.status = 'completed'
+                interview.save()
+            
+            # Get AI service summary
+            ai_service = AIInterviewService(interview.id)
+            result = ai_service.end_interview()
+            
+            # Create activity log
+            try:
+                user = request.user if request.user and request.user.pk else None
+                ActivityLog.objects.create(
+                    user=user,
+                    action='interview_completed',
+                    resource_type='Interview',
+                    resource_id=interview.id,
+                    details={
+                        'candidate_name': interview.candidate.user.full_name if interview.candidate and interview.candidate.user else 'Unknown',
+                        'job_title': interview.job.title if interview.job else 'Unknown',
+                        'questions_asked': result.get('total_questions_asked', 0)
+                    },
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+            except Exception as e:
+                logger.error(f"Error creating activity log: {e}")
+            
+            logger.info(f"Interview {interview.id} ended successfully")
+            
+            return Response({
+                'success': True,
+                'interview_id': interview.id,
+                'status': interview.status,
+                **result
+            })
+            
+        except Interview.DoesNotExist:
+            return Response(
+                {'error': 'Interview not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error ending interview: {str(e)}")
+            return Response(
+                {'error': f'Failed to end interview: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
