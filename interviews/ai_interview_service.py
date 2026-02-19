@@ -34,7 +34,7 @@ class AIInterviewService:
         
         # Initialize Gemini model
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             google_api_key=gemini_api_key,
             temperature=0.7,
             max_tokens=300  # Keep responses concise for voice
