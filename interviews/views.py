@@ -421,16 +421,17 @@ class InterviewViewSet(viewsets.ModelViewSet):
         try:
             interview = self.get_object()
             
-            # Check if interview is scheduled
-            if interview.status != 'scheduled':
+            # ✅ BETTER: Allow starting if scheduled OR in_progress (for resume/refresh)
+            if interview.status not in ['scheduled', 'in_progress']:
                 return Response(
-                    {'error': f'Interview cannot be started. Current status: {interview.status}'},
+                    {'error': f'Interview cannot be started. Current status: {interview.status}. Only scheduled or in-progress interviews can be started.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
             # Update interview status to in_progress
-            interview.status = 'in_progress'
-            interview.save()
+            if interview.status == 'scheduled':
+                interview.status = 'in_progress'
+                interview.save()
             
             # Initialize AI Interview Service
             ai_service = AIInterviewService(interview.id)

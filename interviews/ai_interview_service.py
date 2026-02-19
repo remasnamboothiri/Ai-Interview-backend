@@ -1,50 +1,43 @@
+"""
+AI Interview Service
+Handles AI-powered interview conversations using Google Gemini
+"""
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationChain
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from typing import Dict, List
-from decouple import config  #  To read from .env file
+from decouple import config
 from .models import Interview
 from job_custom_questions.models import JobCustomQuestion
 from default_questions.models import DefaultQuestion
 from candidate_documents.models import CandidateDocument
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AIInterviewService:
     """
-    AI Interview Service for conducting dynamic, conversational interviews
-    using Google's Gemini 2.5 Flash model.
-    
-    This service conducts INTELLIGENT interviews where:
-    - AI generates questions dynamically based on conversation
-    - AI asks follow-up questions based on candidate's answers
-    - Default questions serve as REFERENCE/GUIDANCE, not mandatory script
-    - AI decides when interview is complete based on information gathered
+    AI Interview Service for conducting voice-based conversational interviews
     """
     
     def __init__(self, interview_id: int):
-        """
-        Initialize AI Interview Service
-        
-        Args:
-            interview_id: ID of the interview to conduct
-        """
-        # Get interview object
+        """Initialize AI Interview Service"""
         self.interview = Interview.objects.select_related(
             'job', 'candidate', 'candidate__user', 'agent'
         ).get(id=interview_id)
         
-        # Get Gemini API key from .env file
+        # Get Gemini API key
         gemini_api_key = config('GEMINI_API_KEY')
         
-        # Initialize Gemini 2.5 Flash model
-        # Note: The parameter name is 'google_api_key' (library requirement)
-        # but we're using GEMINI_API_KEY from our .env file
+        # Initialize Gemini model
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            google_api_key=gemini_api_key,  # ← Using Gemini API key here
+            model="gemini-2.0-flash-exp",
+            google_api_key=gemini_api_key,
             temperature=0.7,
-            max_tokens=500
+            max_tokens=300  # Keep responses concise for voice
         )
         
         # Initialize conversation memory
@@ -53,21 +46,17 @@ class AIInterviewService:
             return_messages=True
         )
         
-        # Get reference questions (for AI guidance only)
+        # Get reference questions
         self.reference_questions = self._get_reference_questions()
-        # Build the system prompt
+        
+        # Build system prompt
         self.system_prompt = self._build_system_prompt()
         
-        
-        
-        
-        # Track questions asked (for analytics)
+        # Track questions
         self.questions_asked_count = 0
         
     def _build_system_prompt(self) -> str:
-        """
-        Build system prompt for DYNAMIC interview
-        """
+        """Build system prompt for voice-based interview"""
         job = self.interview.job
         agent = self.interview.agent
         candidate = self.interview.candidate
@@ -78,13 +67,14 @@ class AIInterviewService:
         # Format reference questions
         reference_questions_text = "\n".join([
             f"{i+1}. {q}" for i, q in enumerate(self.reference_questions)
-        ]) if self.reference_questions else "No specific questions provided - use your judgment."
+        ]) if self.reference_questions else "No specific questions - use your judgment."
         
-        # Build dynamic interview prompt
-        prompt = f"""You are an AI interviewer conducting a DYNAMIC, CONVERSATIONAL job interview.
+        prompt = f"""You are a professional AI interviewer conducting a VOICE-BASED interview.
 
-**Your Role and Personality:**
-{agent.system_prompt if agent else "You are a professional, friendly, and insightful interviewer."}
+**CRITICAL: This is a VOICE interview - Keep ALL responses SHORT and CONVERSATIONAL**
+
+**Your Personality:**
+{agent.system_prompt if agent else "Professional, warm, and encouraging"}
 
 **Interview Type:** {agent.interview_type if agent else "technical and behavioral"}
 
@@ -92,56 +82,57 @@ class AIInterviewService:
 - Position: {job.title}
 - Experience Level: {job.experience_level}
 - Skills Required: {', '.join(job.skills_required) if job.skills_required else 'Not specified'}
-- Employment Type: {job.employment_type}
-- Work Mode: {job.work_mode}
 
-**Job Description:**
-{job.description}
-
-**Job Requirements:**
-{job.requirements}
-
-**Candidate Information:**
+**Candidate:**
 - Name: {candidate.user.full_name}
 - Experience: {candidate.experience_years} years
 - Current Company: {candidate.current_company or 'Not specified'}
-- Skills: {', '.join(candidate.skills) if candidate.skills else 'Not specified'}
 
-**Candidate Resume:**
+**Resume:**
 {resume_content}
 
-**REFERENCE QUESTIONS (Use as guidance, not mandatory script):**
+**REFERENCE QUESTIONS (guidance only):**
 {reference_questions_text}
 
-**INTERVIEW INSTRUCTIONS:**
+**VOICE INTERVIEW RULES:**
 
-1. **DYNAMIC QUESTIONING:**
-   - Use reference questions as GUIDANCE only
-   - Ask follow-up questions based on candidate's answers
-   - Explore topics deeper based on responses
-   - Adapt questions to candidate's experience level
+1. **GREETING (First message only):**
+   - Greet warmly: "Hello [FirstName]! Welcome to your interview for [Position]. I'm your AI interviewer today. How are you doing?"
+   
+2. **ICE-BREAKER (Second message):**
+   - After greeting response, ask: "Great! Let's begin. Tell me a bit about yourself and your background."
 
-2. **CONVERSATIONAL FLOW:**
-   - Listen carefully to answers
-   - Ask clarifying questions when needed
-   - Connect questions to previous answers
-   - Make interview feel natural, not scripted
+3. **MAIN QUESTIONS:**
+   - Use reference questions as guidance
+   - Ask ONE question at a time
+   - Keep questions clear and concise
+   - Ask 5-7 questions total
 
-3. **RESPONSE FORMAT:**
-   - Keep responses concise (2-3 sentences max)
-   - Acknowledge answer briefly
-   - Then ask your next question
-   - Be professional but warm
+4. **RESPONSE FORMAT:**
+   - Maximum 2-3 sentences
+   - Acknowledge briefly: "I see" or "Thank you"
+   - Then ask next question
+   - NO long explanations
 
-4. **INTERVIEW COMPLETION:**
-   - Conduct approximately 5-10 questions
-   - When you have sufficient information, conclude naturally
-   - To end: Start message with "INTERVIEW_COMPLETE:" followed by closing
+5. **ENDING:**
+   - After 5-7 questions, conclude naturally
+   - Say: "Thank you so much for your time, [FirstName]! That concludes our interview. We'll review your responses and get back to you soon. Have a great day!"
+   - Start message with "INTERVIEW_COMPLETE:"
 
-**IMPORTANT RULES:**
+**EXAMPLE FLOW:**
+AI: "Hello John! Welcome to your interview for Software Engineer. I'm your AI interviewer today. How are you doing?"
+Candidate: "I'm doing well, thank you!"
+AI: "Great! Let's begin. Tell me a bit about yourself and your background."
+Candidate: [answers]
+AI: "Thank you for sharing. Now, can you describe your experience with Python?"
+...
+AI: "INTERVIEW_COMPLETE: Thank you so much for your time, John! That concludes our interview. We'll review your responses and get back to you soon. Have a great day!"
+
+**REMEMBER:**
+- This is VOICE - be conversational
+- Keep responses SHORT (2-3 sentences max)
 - Ask ONE question at a time
-- Be encouraging and professional
-- When ready to end, start message with "INTERVIEW_COMPLETE:"
+- Be warm and encouraging
 """
         return prompt
     
@@ -154,16 +145,14 @@ class AIInterviewService:
             ).first()
             
             if resume_doc:
-                return f"Resume: {resume_doc.file_name}\nURL: {resume_doc.document_url}"
+                return f"Resume: {resume_doc.file_name}"
             else:
                 return "No resume uploaded"
         except Exception as e:
-            return f"Resume not available: {str(e)}"
+            return "Resume not available"
     
     def _get_reference_questions(self) -> List[str]:
-        """
-        Get reference questions for AI GUIDANCE (not mandatory)
-        """
+        """Get reference questions for guidance"""
         questions = []
         
         # Get custom questions from job
@@ -183,7 +172,7 @@ class AIInterviewService:
             for aq in agent_questions:
                 questions.append(aq.question_text)
         
-        # Fallback questions if none found
+        # Fallback questions
         if not questions:
             questions = [
                 "Tell me about yourself and your professional background.",
@@ -196,9 +185,7 @@ class AIInterviewService:
         return questions
     
     def start_interview(self) -> Dict:
-        """
-        Start the interview with AI-generated opening
-        """
+        """Start the interview with greeting"""
         # Create conversation chain
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", self.system_prompt),
@@ -213,32 +200,33 @@ class AIInterviewService:
             verbose=False
         )
         
-        # Let AI start the interview naturally
-        intro_prompt = """Start the interview now. 
+        # Get AI's greeting
+        candidate_first_name = self.interview.candidate.user.full_name.split()[0]
+        job_title = self.interview.job.title
+        
+        intro_prompt = f"""This is the START of the interview. 
 
-Greet the candidate warmly, briefly introduce yourself, and ask your first question.
+Greet the candidate warmly using their first name ({candidate_first_name}) and the job title ({job_title}).
 
-Consider the candidate's experience level, job requirements, and reference questions provided.
+Follow the GREETING format from your instructions.
 
-Keep your response concise and professional."""
+Keep it SHORT and CONVERSATIONAL (2-3 sentences max)."""
         
         ai_response = self.conversation.predict(input=intro_prompt)
         
-        # Increment questions counter
         self.questions_asked_count += 1
         
         return {
             "status": "started",
             "message": ai_response,
+            "current_question": ai_response,
             "question_number": self.questions_asked_count,
-            "total_questions": len(self.reference_questions),
-            "current_question": "Dynamic - AI generated"
+            "total_questions": len(self.reference_questions) + 2,  # +2 for greeting and ice-breaker
+            "is_complete": False
         }
     
     def send_message(self, candidate_message: str) -> Dict:
-        """
-        Process candidate's answer and get AI's dynamic response
-        """
+        """Process candidate's answer and get AI's response"""
         # Initialize conversation if not exists
         if not hasattr(self, 'conversation') or self.conversation is None:
             prompt_template = ChatPromptTemplate.from_messages([
@@ -254,68 +242,31 @@ Keep your response concise and professional."""
                 verbose=False
             )
         
-        # Let AI continue the conversation naturally
-        continue_prompt = f"""The candidate answered: "{candidate_message}"
-
-Now continue the interview:
-
-1. Briefly acknowledge their answer (1 sentence)
-2. Then either:
-   - Ask a relevant follow-up question to explore deeper, OR
-   - Move to a new topic from the reference questions, OR
-   - If you have gathered sufficient information (typically after 5-10 questions), conclude the interview
-
-If concluding, start your response with "INTERVIEW_COMPLETE:" followed by your closing message.
-
-Otherwise, ask your next question naturally."""
+        # Get AI response
+        ai_response = self.conversation.predict(input=candidate_message)
         
-        ai_response = self.conversation.predict(input=continue_prompt)
-        
-        # Increment questions counter
         self.questions_asked_count += 1
         
-        # Check if AI decided to complete the interview
-        is_complete = ai_response.strip().startswith("INTERVIEW_COMPLETE:")
+        # Check if interview is complete
+        is_complete = "INTERVIEW_COMPLETE:" in ai_response
         
+        # Remove the marker from response if present
         if is_complete:
-            # Remove the completion marker from the message
             ai_response = ai_response.replace("INTERVIEW_COMPLETE:", "").strip()
-            
-            return {
-                "status": "completed",
-                "message": ai_response,
-                "question_number": self.questions_asked_count,
-                "total_questions": len(self.reference_questions),
-                "is_complete": True
-            }
-        else:
-            # Interview continues
-            return {
-                "status": "in_progress",
-                "message": ai_response,
-                "question_number": self.questions_asked_count,
-                "total_questions": len(self.reference_questions),
-                "current_question": "Dynamic - AI generated",
-                "is_complete": False
-            }
-    
-    def get_conversation_history(self) -> List[Dict]:
-        """Get full conversation history"""
-        messages = []
-        for message in self.memory.chat_memory.messages:
-            messages.append({
-                "role": "ai" if message.type == "ai" else "human",
-                "content": message.content
-            })
-        return messages
+        
+        return {
+            "status": "in_progress",
+            "message": ai_response,
+            "current_question": ai_response,
+            "question_number": self.questions_asked_count,
+            "total_questions": len(self.reference_questions) + 2,
+            "is_complete": is_complete
+        }
     
     def end_interview(self) -> Dict:
         """End the interview and return summary"""
-        conversation_history = self.get_conversation_history()
-        
         return {
-            "status": "ended",
-            "total_questions_asked": self.questions_asked_count,
-            "conversation_length": len(conversation_history),
-            "message": "Interview completed successfully"
+            "status": "completed",
+            "message": "Interview completed successfully. Thank you for your time!",
+            "total_questions_asked": self.questions_asked_count
         }
