@@ -53,6 +53,14 @@ class InterviewScreenshotViewSet(viewsets.ModelViewSet):
             return InterviewScreenshotCreateSerializer
         return InterviewScreenshotSerializer
     
+    
+    def get_permissions(self):
+        """Allow unauthenticated access for upload action only"""
+        if self.action == 'upload':
+            return []  # No authentication required for upload
+        return [IsAuthenticated()]  # All other actions require auth
+
+    
     def create(self, request, *args, **kwargs):
         """Create a new screenshot"""
         serializer = self.get_serializer(data=request.data)
@@ -160,10 +168,17 @@ class InterviewScreenshotViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            # Log error but don't fail the interview
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Screenshot upload failed (non-critical): {str(e)}")
+
+            return Response({
+                'success': False,
+                'error': str(e),
+                 'message': 'Screenshot upload failed but interview continues'
+            
+            }, status=status.HTTP_200_OK)  # Return 200 instead of 500
 
     def _save_screenshot_file(self, file, interview_id):
         """Save uploaded file to media/screenshots/ folder"""
