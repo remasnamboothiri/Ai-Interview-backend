@@ -11,6 +11,7 @@ import logging
 from activity_logs.models import ActivityLog
 from notifications.models import Notification
 from interview_data.models import InterviewConversation
+from .result_generator import generate_interview_result  #newly added
 
 from .serializers import (
     InterviewSerializer,
@@ -534,59 +535,110 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    # @action(detail=True, methods=['post'])
+    # def end_interview(self, request, pk=None):
+    #     """
+    #     End the interview
+    #     POST /api/interviews/{id}/end_interview/
+    #     """
+    #     try:
+    #         interview = self.get_object()
+            
+    #         # Update interview status
+    #         if interview.status == 'in_progress':
+    #             interview.status = 'completed'
+    #             interview.save()
+            
+    #         # Get AI service summary
+    #         ai_service = AIInterviewService(interview.id)
+    #         result = ai_service.end_interview()
+            
+    #         # Create activity log
+    #         try:
+    #             user = request.user if request.user and request.user.pk else None
+    #             ActivityLog.objects.create(
+    #                 user=user,
+    #                 action='interview_completed',
+    #                 resource_type='Interview',
+    #                 resource_id=interview.id,
+    #                 details={
+    #                     'candidate_name': interview.candidate.user.full_name if interview.candidate and interview.candidate.user else 'Unknown',
+    #                     'job_title': interview.job.title if interview.job else 'Unknown',
+    #                     'questions_asked': result.get('total_questions_asked', 0)
+    #                 },
+    #                 ip_address=request.META.get('REMOTE_ADDR')
+    #             )
+    #         except Exception as e:
+    #             logger.error(f"Error creating activity log: {e}")
+            
+    #         logger.info(f"Interview {interview.id} ended successfully")
+            
+    #         return Response({
+    #             'success': True,
+    #             'interview_id': interview.id,
+    #             'status': interview.status,
+    #             **result
+    #         })
+            
+    #     except Interview.DoesNotExist:
+    #         return Response(
+    #             {'error': 'Interview not found'},
+    #             status=status.HTTP_404_NOT_FOUND
+    #         )
+    #     except Exception as e:
+    #         logger.error(f"Error ending interview: {str(e)}")
+    #         return Response(
+    #             {'error': f'Failed to end interview: {str(e)}'},
+    #             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #         )
     @action(detail=True, methods=['post'])
     def end_interview(self, request, pk=None):
-        """
-        End the interview
-        POST /api/interviews/{id}/end_interview/
-        """
+        """End the interview and generate result"""
         try:
             interview = self.get_object()
             
-            # Update interview status
             if interview.status == 'in_progress':
                 interview.status = 'completed'
                 interview.save()
             
-            # Get AI service summary
-            ai_service = AIInterviewService(interview.id)
-            result = ai_service.end_interview()
-            
-            # Create activity log
+            user = request.user if request.user and request.user.pk else None
             try:
-                user = request.user if request.user and request.user.pk else None
+                result = generate_interview_result(interview.id, user)
+                result_data = {
+                    'overall_score': float(result.overall_score),
+                    'recommendation': result.recommendation,
+                    'result_id': result.id,
+                }
+            except Exception as e:
+                logger.error(f"Result generation failed: {e}")
+                result_data = {'result_generation_error': str(e)}
+            
+            try:
+                user_log = request.user if request.user and request.user.pk else None
                 ActivityLog.objects.create(
-                    user=user,
+                    user=user_log,
                     action='interview_completed',
                     resource_type='Interview',
                     resource_id=interview.id,
                     details={
                         'candidate_name': interview.candidate.user.full_name if interview.candidate and interview.candidate.user else 'Unknown',
                         'job_title': interview.job.title if interview.job else 'Unknown',
-                        'questions_asked': result.get('total_questions_asked', 0)
                     },
                     ip_address=request.META.get('REMOTE_ADDR')
                 )
             except Exception as e:
                 logger.error(f"Error creating activity log: {e}")
             
-            logger.info(f"Interview {interview.id} ended successfully")
-            
             return Response({
                 'success': True,
                 'interview_id': interview.id,
                 'status': interview.status,
-                **result
+                'message': 'Interview completed and result generated.',
+                **result_data
             })
             
         except Interview.DoesNotExist:
-            return Response(
-                {'error': 'Interview not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({'error': 'Interview not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logger.error(f"Error ending interview: {str(e)}")
-            return Response(
-                {'error': f'Failed to end interview: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({'error': f'Failed to end interview: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
