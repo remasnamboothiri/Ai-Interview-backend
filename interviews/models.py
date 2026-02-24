@@ -44,6 +44,20 @@ class Interview(models.Model):
     meeting_link = models.URLField(blank=True, null=True)
     instructions = models.TextField(blank=True, null=True)
     
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate meeting_link when interview is first created
+        if not self.meeting_link:
+            # First save to get an ID if new record
+            super().save(*args, **kwargs)
+            # Now generate the link using the ID
+            self.meeting_link = f"https://ai-interview-frontend-five.vercel.app/interview-room/{self.id}"
+            # Save again with the link
+            kwargs.pop('force_insert', None)
+            super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
+    
     # Email Notifications
     email_sent = models.BooleanField(default=False)
     email_sent_at = models.DateTimeField(blank=True, null=True)

@@ -50,25 +50,24 @@ class InterviewEmailService:
             # Email subject
             subject = f"Interview Invitation - {interview.job.title}"
             
+            
             # Email body
             message = f"""
-Dear {candidate_name},
+            Dear {candidate_name},
 
-You have been invited to attend an interview for the position of {interview.job.title}.
+You have been invited to attend an interview for the position of {interview.job.title} at {interview.job.company.name}.
 
-Interview Details:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📅 Date & Time: {scheduled_time}
-⏱️  Duration: {interview.duration_minutes} minutes
-💼 Position: {interview.job.title}
-🏢 Company: {interview.job.company.name}
-🤖 Interview Type: {interview.get_interview_type_display()}
+INTERVIEW DETAILS:
+Date & Time: {scheduled_time}
+Duration: {interview.duration_minutes} minutes
+Position: {interview.job.title}
+Company: {interview.job.company.name}
+Interview Type: {interview.get_interview_type_display()}
 
-Interview Link:
+INTERVIEW LINK:
 {interview_link}
 
-Instructions:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PREPARATION CHECKLIST:
 1. Click the link above at the scheduled time
 2. Ensure you have a stable internet connection
 3. Allow camera and microphone access when prompted
@@ -77,23 +76,20 @@ Instructions:
 
 {interview.instructions if interview.instructions else ''}
 
-Technical Requirements:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ Working webcam and microphone
-✓ Modern web browser (Chrome, Firefox, Safari, Edge)
-✓ Stable internet connection (minimum 5 Mbps)
+TECHNICAL REQUIREMENTS:
+- Working webcam and microphone
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- Stable internet connection (minimum 5 Mbps)
 
-If you have any questions or need to reschedule, please contact us immediately.
+If you have any questions or need to reschedule, please reply to this email.
 
 Best of luck with your interview!
 
 Best regards,
 {interview.recruiter.full_name if interview.recruiter else 'The Recruitment Team'}
 {interview.job.company.name}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-This is an automated message. Please do not reply to this email.
 """
+
             
             # Send email
             send_mail(
