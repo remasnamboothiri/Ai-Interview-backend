@@ -248,6 +248,10 @@ AUTO_FAIL_THRESHOLD = 3           # Auto-fail if 3+ violations
 if config('SENDGRID_API_KEY', default=''):
     EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
     SENDGRID_API_KEY = config('SENDGRID_API_KEY')
+    # Disable click and open tracking
+    SENDGRID_TRACK_CLICKS_HTML = False
+    SENDGRID_TRACK_CLICKS_PLAIN = False
+    SENDGRID_TRACK_OPENS = False
 else:
     EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
     EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
