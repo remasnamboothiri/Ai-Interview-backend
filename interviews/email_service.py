@@ -55,10 +55,13 @@ class InterviewEmailService:
             
             
             # Email body
+            
+            recruiter_email = interview.recruiter.email if interview.recruiter else ''
+            recruiter_name = interview.recruiter.full_name if interview.recruiter else 'The Recruitment Team'
             message = f"""
-            Dear {candidate_name},
+Dear {candidate_name},
 
-You have been invited to attend an interview for the position of {interview.job.title} at {interview.job.company.name}.
+You have been invited to attend an AI-powered interview for the position of {interview.job.title} at {interview.job.company.name}.
 
 INTERVIEW DETAILS:
 Date & Time: {scheduled_time}
@@ -67,29 +70,56 @@ Position: {interview.job.title}
 Company: {interview.job.company.name}
 Interview Type: {interview.get_interview_type_display()}
 
-INTERVIEW LINK:
+YOUR INTERVIEW LINK:
 {interview_link}
 
-PREPARATION CHECKLIST:
-1. Click the link above at the scheduled time
-2. Ensure you have a stable internet connection
-3. Allow camera and microphone access when prompted
-4. Find a quiet, well-lit space for the interview
-5. Have your resume and relevant documents ready
+IMPORTANT - PLEASE READ CAREFULLY BEFORE JOINING:
 
-{interview.instructions if interview.instructions else ''}
+1. THIS IS A ONE-TIME INTERVIEW LINK
+   Once you start the interview, you must complete it in one session.
+   The interview link cannot be used again after the session begins.
+   Do not close the browser tab or leave the page during the interview.
+
+2. INTERNET CONNECTION IS CRITICAL
+   You must be in a location with a strong and stable internet connection.
+   A weak or unstable connection will disrupt your interview session.
+   We strongly recommend using a wired connection or strong WiFi signal.
+   Minimum required speed: 5 Mbps (test your speed at fast.com before joining).
+
+3. IF YOUR INTERVIEW IS INTERRUPTED
+   If your session is cut short due to technical issues, power failure,
+   or any other reason, the interview link WILL NOT work again.
+   In this case, please immediately send an email to your recruiter at:
+   {recruiter_email}
+   Explain the issue and request a new interview to be scheduled.
+   Do not attempt to use the same link again as it will not work.
+
+PREPARATION CHECKLIST:
+1. Test your internet speed before the interview (minimum 5 Mbps)
+2. Use a laptop or desktop computer (not a mobile phone)
+3. Use Google Chrome or Microsoft Edge browser for best results
+4. Allow camera and microphone access when the browser asks
+5. Find a quiet, well-lit, distraction-free room
+6. Keep your resume and relevant documents ready
+7. Join 5 minutes before the scheduled time to test your setup
+8. Close all other browser tabs and applications to save bandwidth
 
 TECHNICAL REQUIREMENTS:
-- Working webcam and microphone
-- Modern web browser (Chrome, Firefox, Safari, Edge)
+- Working webcam and microphone (headset recommended for better audio)
+- Google Chrome or Microsoft Edge browser (latest version)
 - Stable internet connection (minimum 5 Mbps)
+- Laptop or desktop computer
 
-If you have any questions or need to reschedule, please reply to this email.
+{f"SPECIAL INSTRUCTIONS:{chr(10)}{interview.instructions}" if interview.instructions else ''}
 
-Best of luck with your interview!
+If you have any questions before the interview, please contact your recruiter:
+Name: {recruiter_name}
+Email: {recruiter_email}
+
+We wish you the very best for your interview!
 
 Best regards,
-{interview.recruiter.full_name if interview.recruiter else 'The Recruitment Team'}
+{recruiter_name}
 {interview.job.company.name}
 """
 
