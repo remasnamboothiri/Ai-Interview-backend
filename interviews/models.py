@@ -51,7 +51,7 @@ class Interview(models.Model):
             # First save to get an ID if new record
             super().save(*args, **kwargs)
             # Now generate the link using the ID
-            self.meeting_link = f"https://ai-interview-frontend-five.vercel.app/interview-room/{self.id}"
+            self.meeting_link = f"https://ai-interview-frontend-five.vercel.app/interview/system-check/{self.id}"
             # Save again with the link
             kwargs.pop('force_insert', None)
             super().save(*args, **kwargs)
@@ -84,7 +84,7 @@ class Interview(models.Model):
         if not self.pk:
             super().save(*args, **kwargs)
             # Step 2: Now generate the meeting_link using the ID we just got
-            self.meeting_link = f"https://ai-interview-frontend-five.vercel.app/interview-room/{self.id}"
+            self.meeting_link = f"https://ai-interview-frontend-five.vercel.app/interview/system-check/{self.id}"
             # Step 3: Save again with the meeting_link filled in
             kwargs.pop('force_insert', None)
             super().save(*args, **kwargs)
