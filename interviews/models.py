@@ -78,6 +78,20 @@ class Interview(models.Model):
     cancelled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cancelled_interviews')
     cancellation_reason = models.TextField(blank=True, null=True)
     
+    
+    def save(self, *args, **kwargs):
+        # Step 1: Save first to get an ID (only for brand new interviews)
+        if not self.pk:
+            super().save(*args, **kwargs)
+            # Step 2: Now generate the meeting_link using the ID we just got
+            self.meeting_link = f"https://ai-interview-frontend-five.vercel.app/interview-room/{self.id}"
+            # Step 3: Save again with the meeting_link filled in
+            kwargs.pop('force_insert', None)
+            super().save(*args, **kwargs)
+        else:
+            # Already existing interview — just save normally
+            super().save(*args, **kwargs)
+    
     class Meta:
         db_table = 'interviews'
         ordering = ['-scheduled_at']
