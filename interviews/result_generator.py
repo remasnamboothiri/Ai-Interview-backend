@@ -2,6 +2,7 @@
 Interview Result Generator
 Auto-generates InterviewResult after interview completes by using
 Gemini AI to evaluate the conversation transcript.
+Now includes screenshot analysis and cheating detection.
 """
 
 import google.generativeai as genai
@@ -52,12 +53,29 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
 
     transcript = "\n\n".join(transcript_lines)
 
-    # Use AI to evaluate
+    # ✅ Get screenshots for cheating detection
+    screenshot_analysis = _analyze_screenshots(interview_id)
+
+    # Use AI to evaluate transcript
     try:
-        evaluation = _evaluate_with_ai(interview, transcript)
+        evaluation = _evaluate_with_ai(interview, transcript, screenshot_analysis)
     except Exception as e:
         logger.error(f"AI evaluation failed for interview {interview_id}: {e}")
+        logger.exception("Full traceback:")
         evaluation = _default_evaluation()
+
+    # ✅ Merge cheating flags into red_flags
+    if screenshot_analysis.get('cheating_detected'):
+        cheating_flags = screenshot_analysis.get('cheating_flags', [])
+        existing_flags = evaluation.get('red_flags', [])
+        evaluation['red_flags'] = existing_flags + cheating_flags
+
+        # ✅ If cheating detected, override recommendation to reject
+        if screenshot_analysis.get('severity') == 'high':
+            evaluation['recommendation'] = 'reject'
+            evaluation['overall_score'] = min(
+                float(evaluation.get('overall_score', 5.0)), 3.0
+            )
 
     # Create the result
     result = InterviewResult.objects.create(
@@ -76,7 +94,11 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
         red_flags=evaluation.get('red_flags', []),
         recommendation=evaluation.get('recommendation', 'maybe'),
         transcript=transcript,
-        ai_feedback=evaluation.get('ai_feedback', {}),
+        ai_feedback={
+            **evaluation.get('ai_feedback', {}),
+            # ✅ Store screenshot analysis in ai_feedback
+            'screenshot_analysis': screenshot_analysis,
+        },
         recruiter_feedback='',
         interview_quality=evaluation.get('interview_quality', 5),
         technical_depth=evaluation.get('technical_depth', 5),
@@ -91,12 +113,175 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
     return result
 
 
-def _evaluate_with_ai(interview, transcript: str) -> dict:
+def _analyze_screenshots(interview_id: int) -> dict:
+    """
+    Analyze screenshots for cheating detection.
+    Checks for: multiple people, phone usage, looking away, camera off.
+    """
+    try:
+        # Import screenshot model
+        try:
+            from interview_screenshots.models import InterviewScreenshot
+        except ImportError:
+            try:
+                from interviews.models import InterviewScreenshot
+            except ImportError:
+                logger.warning("InterviewScreenshot model not found")
+                return {'cheating_detected': False, 'cheating_flags': [], 'total_screenshots': 0}
+
+        screenshots = InterviewScreenshot.objects.filter(
+            interview_id=interview_id
+        ).order_by('created_at')
+
+        total = screenshots.count()
+        if total == 0:
+            return {
+                'cheating_detected': False,
+                'cheating_flags': [],
+                'total_screenshots': 0,
+                'note': 'No screenshots captured during interview'
+            }
+
+        # ✅ Use Gemini Vision to analyze screenshots for cheating
+        genai.configure(api_key=config('GEMINI_API_KEY'))
+        model = genai.GenerativeModel('gemini-2.5-flash')
+
+        cheating_flags = []
+        screenshot_urls = []
+        multiple_person_count = 0
+        phone_detected_count = 0
+        looking_away_count = 0
+
+        # Analyze up to 10 screenshots spread across the interview
+        # Pick evenly spaced screenshots for best coverage
+        step = max(1, total // 10)
+        screenshots_to_analyze = list(screenshots)[::step][:10]
+
+        for screenshot in screenshots_to_analyze:
+            try:
+                # Get screenshot URL
+                if hasattr(screenshot, 'webcam_image') and screenshot.webcam_image:
+                    url = screenshot.webcam_image.url
+                    screenshot_urls.append(url)
+
+                    # ✅ Analyze image with Gemini Vision
+                    prompt = """Analyze this interview screenshot and check for:
+1. Multiple people visible (besides the candidate)
+2. Phone or mobile device visible or being used
+3. Candidate looking away from screen for a long time
+4. Candidate not present / camera blocked / dark image
+
+Respond ONLY with valid JSON:
+{
+    "multiple_persons": true/false,
+    "phone_detected": true/false,
+    "looking_away": true/false,
+    "not_present": true/false,
+    "notes": "brief description of what you see"
+}"""
+
+                    # Fetch the image data
+                    import urllib.request
+                    import base64
+
+                    # Try to read from file system directly
+                    if screenshot.webcam_image:
+                        try:
+                            with open(screenshot.webcam_image.path, 'rb') as f:
+                                image_data = f.read()
+
+                            image_part = {
+                                "mime_type": "image/jpeg",
+                                "data": base64.b64encode(image_data).decode()
+                            }
+
+                            response = model.generate_content([prompt, image_part])
+                            text = response.text.strip()
+
+                            # Clean JSON
+                            if text.startswith('```'):
+                                text = text.split('\n', 1)[1] if '\n' in text else text[3:]
+                            if text.endswith('```'):
+                                text = text[:-3]
+                            text = text.strip()
+
+                            analysis = json.loads(text)
+
+                            if analysis.get('multiple_persons'):
+                                multiple_person_count += 1
+                            if analysis.get('phone_detected'):
+                                phone_detected_count += 1
+                            if analysis.get('looking_away'):
+                                looking_away_count += 1
+
+                        except Exception as img_error:
+                            logger.warning(f"Could not analyze screenshot: {img_error}")
+
+            except Exception as e:
+                logger.warning(f"Error processing screenshot: {e}")
+
+        # ✅ Determine cheating based on counts
+        analyzed_count = len(screenshots_to_analyze)
+
+        if multiple_person_count >= 2:
+            cheating_flags.append(
+                f"Multiple people detected in {multiple_person_count} screenshots — "
+                f"possible external assistance during interview"
+            )
+
+        if phone_detected_count >= 2:
+            cheating_flags.append(
+                f"Mobile phone detected in {phone_detected_count} screenshots — "
+                f"possible use of external resources"
+            )
+
+        if looking_away_count >= 3:
+            cheating_flags.append(
+                f"Candidate looking away from screen frequently ({looking_away_count} instances) — "
+                f"possible reading from external material"
+            )
+
+        cheating_detected = len(cheating_flags) > 0
+        severity = 'high' if len(cheating_flags) >= 2 else ('medium' if cheating_flags else 'none')
+
+        return {
+            'cheating_detected': cheating_detected,
+            'severity': severity,
+            'cheating_flags': cheating_flags,
+            'total_screenshots': total,
+            'screenshots_analyzed': analyzed_count,
+            'screenshot_urls': screenshot_urls[:5],  # Store first 5 URLs for display
+            'multiple_person_count': multiple_person_count,
+            'phone_detected_count': phone_detected_count,
+            'looking_away_count': looking_away_count,
+        }
+
+    except Exception as e:
+        logger.error(f"Screenshot analysis failed: {e}")
+        return {
+            'cheating_detected': False,
+            'cheating_flags': [],
+            'total_screenshots': 0,
+            'error': str(e)
+        }
+
+
+def _evaluate_with_ai(interview, transcript: str, screenshot_analysis: dict = None) -> dict:
     """Use Gemini to evaluate the interview transcript."""
     genai.configure(api_key=config('GEMINI_API_KEY'))
 
     job = interview.job
     candidate = interview.candidate
+
+    # ✅ Include cheating context in prompt if detected
+    cheating_context = ""
+    if screenshot_analysis and screenshot_analysis.get('cheating_detected'):
+        cheating_context = f"""
+**IMPORTANT — Integrity Issues Detected:**
+The following issues were detected via screenshot analysis:
+{chr(10).join(f"- {flag}" for flag in screenshot_analysis.get('cheating_flags', []))}
+Please factor these integrity concerns into your evaluation.
+"""
 
     prompt = f"""You are an expert interview evaluator. Analyze the following interview transcript and provide a detailed evaluation.
 
@@ -109,8 +294,17 @@ def _evaluate_with_ai(interview, transcript: str) -> dict:
 - Name: {candidate.user.full_name}
 - Experience: {candidate.experience_years} years
 
+{cheating_context}
+
 **Interview Transcript:**
 {transcript}
+
+**IMPORTANT INSTRUCTIONS:**
+- Evaluate EACH candidate individually based on their actual answers
+- Do NOT use generic responses
+- Base scores ONLY on what THIS candidate actually said
+- Be specific about their actual strengths and weaknesses
+- If transcript is short, note that but still evaluate what was said
 
 **Evaluate and respond with ONLY valid JSON (no markdown, no code blocks):**
 {{
@@ -119,9 +313,9 @@ def _evaluate_with_ai(interview, transcript: str) -> dict:
     "communication_score": <number 1-10>,
     "cultural_fit_score": <number 1-10>,
     "behavioral_score": <number 1-10>,
-    "strengths": ["strength 1", "strength 2", "strength 3"],
-    "weaknesses": ["weakness 1", "weakness 2"],
-    "red_flags": ["red flag if any, or empty array"],
+    "strengths": ["specific strength from their actual answers", "another specific strength"],
+    "weaknesses": ["specific area they need to improve based on their answers"],
+    "red_flags": ["any concerns, or empty array if none"],
     "recommendation": "<hire|reject|maybe|second_round>",
     "interview_quality": <number 1-10>,
     "technical_depth": <number 1-10>,
@@ -131,12 +325,12 @@ def _evaluate_with_ai(interview, transcript: str) -> dict:
         "clarity": "<high|medium|low>"
     }},
     "skill_assessment": {{
-        "relevant_skills_demonstrated": ["skill1", "skill2"],
-        "missing_skills": ["skill1"]
+        "relevant_skills_demonstrated": ["actual skills they showed"],
+        "missing_skills": ["skills needed but not demonstrated"]
     }},
     "ai_feedback": {{
-        "summary": "2-3 sentence overall assessment",
-        "hiring_justification": "1-2 sentence justification for the recommendation"
+        "summary": "2-3 sentence assessment specific to THIS candidate's performance",
+        "hiring_justification": "1-2 sentence justification based on their actual answers"
     }}
 }}
 
@@ -144,35 +338,38 @@ Score Guidelines:
 - 8-10: Excellent candidate, strong hire
 - 6-7: Good candidate, potential hire
 - 4-5: Average, needs further evaluation
-- 1-3: Below expectations, likely reject
-
-Be fair and objective. Base scores ONLY on what the candidate actually said."""
+- 1-3: Below expectations, likely reject"""
 
     model = genai.GenerativeModel(
         model_name="gemini-2.5-flash",
         generation_config=genai.types.GenerationConfig(
             temperature=0.3,
-            max_output_tokens=1000,
+            max_output_tokens=1500,
         )
     )
 
     response = model.generate_content(prompt)
     text = response.text.strip()
 
-    # Clean up response — remove markdown code blocks if present
+    # Clean up response
     if text.startswith('```'):
-        text = text.split('\n', 1)[1] if '\n' in text else text[3:]
+        lines = text.split('\n')
+        text = '\n'.join(lines[1:]) if len(lines) > 1 else text[3:]
     if text.endswith('```'):
         text = text[:-3]
     text = text.strip()
 
+    # ✅ Log raw response for debugging
+    logger.info(f"Gemini raw response (first 300 chars): {text[:300]}")
+
     try:
         evaluation = json.loads(text)
-    except json.JSONDecodeError:
-        logger.error(f"Failed to parse AI evaluation: {text[:200]}")
-        evaluation = _default_evaluation()
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse AI evaluation JSON: {e}")
+        logger.error(f"Raw text: {text[:500]}")
+        raise  # Re-raise so caller can use fallback
 
-    # Clamp scores to valid range
+    # Clamp scores
     for key in ['overall_score', 'technical_score', 'communication_score',
                 'cultural_fit_score', 'behavioral_score']:
         if key in evaluation:
@@ -182,7 +379,6 @@ Be fair and objective. Base scores ONLY on what the candidate actually said."""
         if key in evaluation:
             evaluation[key] = max(1, min(10, int(evaluation[key])))
 
-    # Validate recommendation
     valid_recs = ['hire', 'reject', 'maybe', 'second_round']
     if evaluation.get('recommendation') not in valid_recs:
         evaluation['recommendation'] = 'maybe'
@@ -198,8 +394,8 @@ def _default_evaluation() -> dict:
         'communication_score': 5.0,
         'cultural_fit_score': 5.0,
         'behavioral_score': 5.0,
-        'strengths': ['Completed the interview'],
-        'weaknesses': ['Unable to fully evaluate - AI scoring unavailable'],
+        'strengths': [],
+        'weaknesses': [],
         'red_flags': [],
         'recommendation': 'maybe',
         'interview_quality': 5,
@@ -214,8 +410,8 @@ def _default_evaluation() -> dict:
             'missing_skills': []
         },
         'ai_feedback': {
-            'summary': 'Interview completed. Manual review recommended as AI scoring was unavailable.',
-            'hiring_justification': 'Recommend manual review of the transcript.'
+            'summary': 'AI evaluation could not be completed. Please review the transcript manually.',
+            'hiring_justification': 'Manual review of transcript recommended.'
         }
     }
 
@@ -223,7 +419,7 @@ def _default_evaluation() -> dict:
 def _create_empty_result(interview, user=None) -> InterviewResult:
     """Create a minimal result when no conversation exists."""
     evaluation = _default_evaluation()
-    evaluation['weaknesses'] = ['No conversation data recorded']
+    evaluation['red_flags'] = ['No conversation data recorded']
     evaluation['recommendation'] = 'maybe'
 
     return InterviewResult.objects.create(
@@ -238,8 +434,8 @@ def _create_empty_result(interview, user=None) -> InterviewResult:
         behavioral_analysis=evaluation['behavioral_analysis'],
         skill_assessment=evaluation['skill_assessment'],
         strengths=[],
-        weaknesses=evaluation['weaknesses'],
-        red_flags=['No conversation data'],
+        weaknesses=[],
+        red_flags=evaluation['red_flags'],
         recommendation='maybe',
         transcript='No conversation recorded.',
         ai_feedback=evaluation['ai_feedback'],
