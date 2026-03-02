@@ -1,12 +1,11 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
 from jobs.models import Job
 from candidates.models import Candidate
 from users.models import User
 from agents.models import Agent
+from decouple import config
 import uuid
+
 
 class Interview(models.Model):
     STATUS_CHOICES = [
@@ -30,7 +29,6 @@ class Interview(models.Model):
     # Foreign Keys
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='interviews')
     candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, related_name='interviews')
-    #recruiter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='scheduled_interviews')
     recruiter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='scheduled_interviews', null=True, blank=True)
     agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='interviews')
     
@@ -44,20 +42,6 @@ class Interview(models.Model):
     meeting_link = models.URLField(blank=True, null=True)
     instructions = models.TextField(blank=True, null=True)
     
-    
-    def save(self, *args, **kwargs):
-        # Auto-generate meeting_link when interview is first created
-        if not self.meeting_link:
-            # First save to get an ID if new record
-            super().save(*args, **kwargs)
-            # Now generate the link using the ID
-            self.meeting_link = f"https://ai-interview-frontend-five.vercel.app/interview/system-check/{self.id}"
-            # Save again with the link
-            kwargs.pop('force_insert', None)
-            super().save(*args, **kwargs)
-        else:
-            super().save(*args, **kwargs)
-    
     # Email Notifications
     email_sent = models.BooleanField(default=False)
     email_sent_at = models.DateTimeField(blank=True, null=True)
@@ -65,9 +49,7 @@ class Interview(models.Model):
     
     # Audit Fields
     created_at = models.DateTimeField(auto_now_add=True)
-    #created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_interviews')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_interviews', null=True, blank=True)
-
     created_ip = models.GenericIPAddressField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='updated_interviews', null=True, blank=True)
@@ -78,23 +60,16 @@ class Interview(models.Model):
     cancelled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cancelled_interviews')
     cancellation_reason = models.TextField(blank=True, null=True)
     
-    
-    def save(self, *args, **kwargs):
-        # Step 1: Save first to get an ID (only for brand new interviews)
-        if not self.pk:
-            super().save(*args, **kwargs)
-            # Step 2: Now generate the meeting_link using the ID we just got
-            self.meeting_link = f"https://ai-interview-frontend-five.vercel.app/interview/system-check/{self.id}"
-            # Step 3: Save again with the meeting_link filled in
-            kwargs.pop('force_insert', None)
-            super().save(*args, **kwargs)
-        else:
-            # Already existing interview — just save normally
-            super().save(*args, **kwargs)
-    
     class Meta:
         db_table = 'interviews'
         ordering = ['-scheduled_at']
     
     def __str__(self):
         return f"Interview: {self.candidate.user.full_name} for {self.job.title}"
+
+    def save(self, *args, **kwargs):
+        # Auto-generate meeting_link using UUID (candidate enters via system-check)
+        if not self.meeting_link:
+            frontend_url = config('FRONTEND_URL', default='http://localhost:5173')
+            self.meeting_link = f"{frontend_url}/interview/system-check/{self.uuid}"
+        super().save(*args, **kwargs)

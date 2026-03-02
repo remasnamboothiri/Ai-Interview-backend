@@ -410,6 +410,45 @@ class InterviewViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     # ========================================
+    # UUID LOOKUP ENDPOINT
+    # ========================================
+    
+    @action(detail=False, methods=['get'], url_path='by-uuid/(?P<uuid>[0-9a-f-]+)')
+    def by_uuid(self, request, uuid=None):
+        """
+        Lookup interview by UUID — used by candidate interview room
+        GET /api/interviews/by-uuid/<uuid>/
+        Returns interview ID and basic details needed to start the interview
+        """
+        try:
+            interview = Interview.objects.select_related(
+                'job', 'candidate', 'candidate__user', 'agent'
+            ).get(uuid=uuid)
+            
+            return Response({
+                'id': interview.id,
+                'uuid': str(interview.uuid),
+                'status': interview.status,
+                'job_title': interview.job.title if interview.job else '',
+                'company_name': interview.job.company.name if interview.job and interview.job.company else '',
+                'candidate_name': interview.candidate.user.full_name if interview.candidate and interview.candidate.user else '',
+                'scheduled_at': interview.scheduled_at.isoformat() if interview.scheduled_at else None,
+                'duration_minutes': interview.duration_minutes,
+                'interview_type': interview.interview_type,
+            })
+        except Interview.DoesNotExist:
+            return Response(
+                {'error': 'Interview not found. The link may be invalid or expired.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error looking up interview by UUID: {str(e)}")
+            return Response(
+                {'error': 'Failed to load interview'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    # ========================================
     # AI INTERVIEW ENDPOINTS
     # ========================================
     
@@ -535,62 +574,6 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    # @action(detail=True, methods=['post'])
-    # def end_interview(self, request, pk=None):
-    #     """
-    #     End the interview
-    #     POST /api/interviews/{id}/end_interview/
-    #     """
-    #     try:
-    #         interview = self.get_object()
-            
-    #         # Update interview status
-    #         if interview.status == 'in_progress':
-    #             interview.status = 'completed'
-    #             interview.save()
-            
-    #         # Get AI service summary
-    #         ai_service = AIInterviewService(interview.id)
-    #         result = ai_service.end_interview()
-            
-    #         # Create activity log
-    #         try:
-    #             user = request.user if request.user and request.user.pk else None
-    #             ActivityLog.objects.create(
-    #                 user=user,
-    #                 action='interview_completed',
-    #                 resource_type='Interview',
-    #                 resource_id=interview.id,
-    #                 details={
-    #                     'candidate_name': interview.candidate.user.full_name if interview.candidate and interview.candidate.user else 'Unknown',
-    #                     'job_title': interview.job.title if interview.job else 'Unknown',
-    #                     'questions_asked': result.get('total_questions_asked', 0)
-    #                 },
-    #                 ip_address=request.META.get('REMOTE_ADDR')
-    #             )
-    #         except Exception as e:
-    #             logger.error(f"Error creating activity log: {e}")
-            
-    #         logger.info(f"Interview {interview.id} ended successfully")
-            
-    #         return Response({
-    #             'success': True,
-    #             'interview_id': interview.id,
-    #             'status': interview.status,
-    #             **result
-    #         })
-            
-    #     except Interview.DoesNotExist:
-    #         return Response(
-    #             {'error': 'Interview not found'},
-    #             status=status.HTTP_404_NOT_FOUND
-    #         )
-    #     except Exception as e:
-    #         logger.error(f"Error ending interview: {str(e)}")
-    #         return Response(
-    #             {'error': f'Failed to end interview: {str(e)}'},
-    #             status=status.HTTP_500_INTERNAL_SERVER_ERROR
-    #         )
     @action(detail=True, methods=['post'])
     def end_interview(self, request, pk=None):
         """End the interview and generate result"""
