@@ -14,6 +14,9 @@ from decouple import config
 from interview_data.models import InterviewConversation
 from interview_results.models import InterviewResult
 from .models import Interview
+import google.generativeai as genai
+import json
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -115,34 +118,26 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
 
 def _analyze_screenshots(interview_id: int) -> dict:
     """
-    Analyze screenshots for cheating detection.
-    Checks for: multiple people, phone usage, looking away, camera off.
+    Analyze screenshots for cheating detection using Gemini Vision.
     """
     try:
-        # Import screenshot model
-        try:
-            from interview_screenshots.models import InterviewScreenshot
-        except ImportError:
-            try:
-                from interviews.models import InterviewScreenshot
-            except ImportError:
-                logger.warning("InterviewScreenshot model not found")
-                return {'cheating_detected': False, 'cheating_flags': [], 'total_screenshots': 0}
+        from interview_screenshots.models import InterviewScreenshot
 
         screenshots = InterviewScreenshot.objects.filter(
             interview_id=interview_id
         ).order_by('created_at')
 
         total = screenshots.count()
+        logger.info(f"Found {total} screenshots for interview {interview_id}")
+
         if total == 0:
             return {
                 'cheating_detected': False,
                 'cheating_flags': [],
-                'total_screenshots': 0,
+                'total_screenshots': total,
                 'note': 'No screenshots captured during interview'
             }
 
-        # ✅ Use Gemini Vision to analyze screenshots for cheating
         genai.configure(api_key=config('GEMINI_API_KEY'))
         model = genai.GenerativeModel('gemini-2.5-flash')
 
@@ -152,92 +147,100 @@ def _analyze_screenshots(interview_id: int) -> dict:
         phone_detected_count = 0
         looking_away_count = 0
 
-        # Analyze up to 10 screenshots spread across the interview
-        # Pick evenly spaced screenshots for best coverage
+        # Pick up to 10 evenly spaced screenshots
         step = max(1, total // 10)
         screenshots_to_analyze = list(screenshots)[::step][:10]
+        analyzed_count = 0
 
         for screenshot in screenshots_to_analyze:
             try:
-                # Get screenshot URL
-                if hasattr(screenshot, 'webcam_image') and screenshot.webcam_image:
-                    url = screenshot.webcam_image.url
-                    screenshot_urls.append(url)
+                # ✅ Use screenshot_url field (not webcam_image)
+                file_url = screenshot.screenshot_url
+                if not file_url:
+                    continue
 
-                    # ✅ Analyze image with Gemini Vision
-                    prompt = """Analyze this interview screenshot and check for:
-1. Multiple people visible (besides the candidate)
-2. Phone or mobile device visible or being used
-3. Candidate looking away from screen for a long time
-4. Candidate not present / camera blocked / dark image
+                screenshot_urls.append(file_url)
 
-Respond ONLY with valid JSON:
+                # ✅ Build the file path from the URL
+                # URL looks like: /media/screenshots/60/screenshot_123.jpg
+                # File is at: MEDIA_ROOT/screenshots/60/screenshot_123.jpg
+                from django.conf import settings
+                relative_path = file_url.lstrip('/')
+                # Remove 'media/' prefix if present
+                if relative_path.startswith('media/'):
+                    relative_path = relative_path[6:]
+                file_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
+                if not os.path.exists(file_path):
+                    logger.warning(f"Screenshot file not found: {file_path}")
+                    continue
+
+                # ✅ Read file and send to Gemini Vision
+                import base64
+                with open(file_path, 'rb') as f:
+                    image_data = f.read()
+
+                image_part = {
+                    "mime_type": "image/jpeg",
+                    "data": base64.b64encode(image_data).decode()
+                }
+
+                prompt = """Analyze this interview webcam screenshot carefully.
+Check for these specific issues:
+1. Are there multiple people visible (not just the candidate)?
+2. Is a phone or mobile device visible or being used?
+3. Is the candidate clearly looking away from the screen for a long time?
+4. Is the candidate absent or is the camera blocked?
+
+Respond ONLY with this exact JSON format:
 {
-    "multiple_persons": true/false,
-    "phone_detected": true/false,
-    "looking_away": true/false,
-    "not_present": true/false,
-    "notes": "brief description of what you see"
+    "multiple_persons": true or false,
+    "phone_detected": true or false,
+    "looking_away": true or false,
+    "not_present": true or false,
+    "notes": "one sentence describing what you see"
 }"""
 
-                    # Fetch the image data
-                    import urllib.request
-                    import base64
+                response = model.generate_content([prompt, image_part])
+                text = response.text.strip()
 
-                    # Try to read from file system directly
-                    if screenshot.webcam_image:
-                        try:
-                            with open(screenshot.webcam_image.path, 'rb') as f:
-                                image_data = f.read()
+                # Clean JSON markers
+                if '```' in text:
+                    text = text.split('```')[1] if '```' in text else text
+                    if text.startswith('json'):
+                        text = text[4:]
+                text = text.strip()
 
-                            image_part = {
-                                "mime_type": "image/jpeg",
-                                "data": base64.b64encode(image_data).decode()
-                            }
+                analysis = json.loads(text)
+                analyzed_count += 1
 
-                            response = model.generate_content([prompt, image_part])
-                            text = response.text.strip()
+                if analysis.get('multiple_persons'):
+                    multiple_person_count += 1
+                if analysis.get('phone_detected'):
+                    phone_detected_count += 1
+                if analysis.get('looking_away'):
+                    looking_away_count += 1
 
-                            # Clean JSON
-                            if text.startswith('```'):
-                                text = text.split('\n', 1)[1] if '\n' in text else text[3:]
-                            if text.endswith('```'):
-                                text = text[:-3]
-                            text = text.strip()
-
-                            analysis = json.loads(text)
-
-                            if analysis.get('multiple_persons'):
-                                multiple_person_count += 1
-                            if analysis.get('phone_detected'):
-                                phone_detected_count += 1
-                            if analysis.get('looking_away'):
-                                looking_away_count += 1
-
-                        except Exception as img_error:
-                            logger.warning(f"Could not analyze screenshot: {img_error}")
+                logger.info(f"Screenshot analyzed: {analysis.get('notes', '')}")
 
             except Exception as e:
-                logger.warning(f"Error processing screenshot: {e}")
+                logger.warning(f"Could not analyze screenshot {screenshot.id}: {e}")
+                continue
 
-        # ✅ Determine cheating based on counts
-        analyzed_count = len(screenshots_to_analyze)
-
+        # ✅ Determine cheating flags
         if multiple_person_count >= 2:
             cheating_flags.append(
                 f"Multiple people detected in {multiple_person_count} screenshots — "
-                f"possible external assistance during interview"
+                f"possible external assistance"
             )
-
-        if phone_detected_count >= 2:
+        if phone_detected_count >= 1:
             cheating_flags.append(
                 f"Mobile phone detected in {phone_detected_count} screenshots — "
                 f"possible use of external resources"
             )
-
         if looking_away_count >= 3:
             cheating_flags.append(
-                f"Candidate looking away from screen frequently ({looking_away_count} instances) — "
+                f"Candidate looking away from screen in {looking_away_count} screenshots — "
                 f"possible reading from external material"
             )
 
@@ -250,7 +253,7 @@ Respond ONLY with valid JSON:
             'cheating_flags': cheating_flags,
             'total_screenshots': total,
             'screenshots_analyzed': analyzed_count,
-            'screenshot_urls': screenshot_urls[:5],  # Store first 5 URLs for display
+            'screenshot_urls': screenshot_urls[:5],
             'multiple_person_count': multiple_person_count,
             'phone_detected_count': phone_detected_count,
             'looking_away_count': looking_away_count,
@@ -258,6 +261,7 @@ Respond ONLY with valid JSON:
 
     except Exception as e:
         logger.error(f"Screenshot analysis failed: {e}")
+        logger.exception("Full traceback:")
         return {
             'cheating_detected': False,
             'cheating_flags': [],
@@ -344,7 +348,7 @@ Score Guidelines:
         model_name="gemini-2.5-flash",
         generation_config=genai.types.GenerationConfig(
             temperature=0.3,
-            max_output_tokens=1500,
+            max_output_tokens=8000,
         )
     )
 

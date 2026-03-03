@@ -13,7 +13,9 @@ from interviews.models import Interview
 import os
 import time
 from django.conf import settings
-from .face_analyzer import FaceAnalyzer
+#from .face_analyzer import FaceAnalyzer
+# FaceAnalyzer removed — mediapipe not compatible with this server
+# Screenshots are saved and analyzed by Gemini Vision in result_generator.py instead
 
 
 
@@ -143,21 +145,39 @@ class InterviewScreenshotViewSet(viewsets.ModelViewSet):
             file_url = self._save_screenshot_file(webcam_file, interview_id)
         
             # Analyze image with AI
-            analyzer = FaceAnalyzer()
-            analysis_result = analyzer.analyze_image(webcam_file)
+            #analyzer = FaceAnalyzer()
+            #analysis_result = analyzer.analyze_image(webcam_file)
         
             # Create database record
+            # screenshot = InterviewScreenshot.objects.create(
+            #     interview=interview,
+            #     screenshot_url=file_url,
+            #     screenshot_number=screenshot_number,
+            #     face_count=analysis_result['face_count'],
+            #     multiple_people_detected=analysis_result['multiple_people_detected'],
+            #     issue_type=analysis_result['issue_type'],
+            #     confidence_score=analysis_result['confidence_score'],
+            #     created_ip=self._get_client_ip(request),
+            #     metadata={
+            #         'analysis_success': analysis_result['success'],
+            #         'file_size': webcam_file.size,
+            #         'content_type': webcam_file.content_type
+            #     }
+            # )
+            
+            # ✅ Skip mediapipe — just save screenshot
+            # Gemini Vision will analyze it when result is generated
             screenshot = InterviewScreenshot.objects.create(
                 interview=interview,
                 screenshot_url=file_url,
                 screenshot_number=screenshot_number,
-                face_count=analysis_result['face_count'],
-                multiple_people_detected=analysis_result['multiple_people_detected'],
-                issue_type=analysis_result['issue_type'],
-                confidence_score=analysis_result['confidence_score'],
+                face_count=0,
+                multiple_people_detected=False,
+                issue_type='none',
+                confidence_score=0.0,
                 created_ip=self._get_client_ip(request),
                 metadata={
-                    'analysis_success': analysis_result['success'],
+                    'analysis_success': True,
                     'file_size': webcam_file.size,
                     'content_type': webcam_file.content_type
                 }
