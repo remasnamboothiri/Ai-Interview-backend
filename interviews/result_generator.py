@@ -4,7 +4,7 @@ Auto-generates InterviewResult after interview completes by using
 Gemini AI to evaluate the conversation transcript.
 Now includes screenshot analysis and cheating detection.
 """
-
+import os  
 import google.generativeai as genai
 import json
 import logging
@@ -139,7 +139,7 @@ def _analyze_screenshots(interview_id: int) -> dict:
             }
 
         genai.configure(api_key=config('GEMINI_API_KEY'))
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
         cheating_flags = []
         screenshot_urls = []
@@ -345,7 +345,7 @@ Score Guidelines:
 - 1-3: Below expectations, likely reject"""
 
     model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
+        model_name="gemini-1.5-flash",
         generation_config=genai.types.GenerationConfig(
             temperature=0.3,
             max_output_tokens=8000,
