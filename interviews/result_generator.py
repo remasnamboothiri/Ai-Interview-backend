@@ -14,9 +14,6 @@ from decouple import config
 from interview_data.models import InterviewConversation
 from interview_results.models import InterviewResult
 from .models import Interview
-import google.generativeai as genai
-import json
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +53,7 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
 
     transcript = "\n\n".join(transcript_lines)
 
-    # ✅ Get screenshots for cheating detection
+    # Get screenshots for cheating detection
     screenshot_analysis = _analyze_screenshots(interview_id)
 
     # Use AI to evaluate transcript
@@ -67,13 +64,13 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
         logger.exception("Full traceback:")
         evaluation = _default_evaluation()
 
-    # ✅ Merge cheating flags into red_flags
+    # Merge cheating flags into red_flags
     if screenshot_analysis.get('cheating_detected'):
         cheating_flags = screenshot_analysis.get('cheating_flags', [])
         existing_flags = evaluation.get('red_flags', [])
         evaluation['red_flags'] = existing_flags + cheating_flags
 
-        # ✅ If cheating detected, override recommendation to reject
+        # If cheating detected, override recommendation to reject
         if screenshot_analysis.get('severity') == 'high':
             evaluation['recommendation'] = 'reject'
             evaluation['overall_score'] = min(
@@ -99,7 +96,6 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
         transcript=transcript,
         ai_feedback={
             **evaluation.get('ai_feedback', {}),
-            # ✅ Store screenshot analysis in ai_feedback
             'screenshot_analysis': screenshot_analysis,
         },
         recruiter_feedback='',
@@ -139,7 +135,7 @@ def _analyze_screenshots(interview_id: int) -> dict:
             }
 
         genai.configure(api_key=config('GEMINI_API_KEY'))
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')  # ✅ Changed from 1.5-flash
 
         cheating_flags = []
         screenshot_urls = []
@@ -154,19 +150,14 @@ def _analyze_screenshots(interview_id: int) -> dict:
 
         for screenshot in screenshots_to_analyze:
             try:
-                # ✅ Use screenshot_url field (not webcam_image)
                 file_url = screenshot.screenshot_url
                 if not file_url:
                     continue
 
                 screenshot_urls.append(file_url)
 
-                # ✅ Build the file path from the URL
-                # URL looks like: /media/screenshots/60/screenshot_123.jpg
-                # File is at: MEDIA_ROOT/screenshots/60/screenshot_123.jpg
                 from django.conf import settings
                 relative_path = file_url.lstrip('/')
-                # Remove 'media/' prefix if present
                 if relative_path.startswith('media/'):
                     relative_path = relative_path[6:]
                 file_path = os.path.join(settings.MEDIA_ROOT, relative_path)
@@ -175,7 +166,6 @@ def _analyze_screenshots(interview_id: int) -> dict:
                     logger.warning(f"Screenshot file not found: {file_path}")
                     continue
 
-                # ✅ Read file and send to Gemini Vision
                 import base64
                 with open(file_path, 'rb') as f:
                     image_data = f.read()
@@ -227,7 +217,7 @@ Respond ONLY with this exact JSON format:
                 logger.warning(f"Could not analyze screenshot {screenshot.id}: {e}")
                 continue
 
-        # ✅ Determine cheating flags
+        # Determine cheating flags
         if multiple_person_count >= 2:
             cheating_flags.append(
                 f"Multiple people detected in {multiple_person_count} screenshots — "
@@ -277,7 +267,7 @@ def _evaluate_with_ai(interview, transcript: str, screenshot_analysis: dict = No
     job = interview.job
     candidate = interview.candidate
 
-    # ✅ Include cheating context in prompt if detected
+    # Include cheating context in prompt if detected
     cheating_context = ""
     if screenshot_analysis and screenshot_analysis.get('cheating_detected'):
         cheating_context = f"""
@@ -345,7 +335,7 @@ Score Guidelines:
 - 1-3: Below expectations, likely reject"""
 
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
+        model_name="gemini-2.5-flash",  # ✅ Changed from 1.5-flash
         generation_config=genai.types.GenerationConfig(
             temperature=0.3,
             max_output_tokens=8000,
@@ -363,7 +353,7 @@ Score Guidelines:
         text = text[:-3]
     text = text.strip()
 
-    # ✅ Log raw response for debugging
+    # Log raw response for debugging
     logger.info(f"Gemini raw response (first 300 chars): {text[:300]}")
 
     try:

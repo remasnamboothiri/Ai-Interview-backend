@@ -30,41 +30,7 @@ class CandidateSerializer(serializers.ModelSerializer):
 
 
 
-# from rest_framework import serializers
-# from .models import Candidate
 
-# class CandidateSerializer(serializers.ModelSerializer):
-#     # Read-only fields from related User model
-#     full_name = serializers.CharField(source='user.full_name', read_only=True)
-#     email = serializers.EmailField(source='user.email', read_only=True)
-#     phone = serializers.CharField(source='user.phone', read_only=True)
-    
-#     # Explicitly define user_id as writable
-#     #user_id = serializers.IntegerField(write_only=False, required=True)
-#     # ✅ CHANGE THIS LINE
-#     user = serializers.PrimaryKeyRelatedField(
-#         queryset=User.objects.all(),
-#         write_only=False,
-#         required=True
-#     )
-#     class Meta:
-#         model = Candidate
-#         fields = [
-#             'id',
-#             'user',
-#             'full_name',
-#             'email',
-#             'phone',
-#             'experience_years',
-#             'current_company',
-#             'linkedin_url',
-#             'portfolio_url',
-#             'skills',
-#             'general_notes',
-#             'created_at',
-#             'updated_at',
-#         ]
-#         read_only_fields = ['id', 'created_at', 'updated_at', 'full_name', 'email', 'phone']
     
     def create(self, validated_data):
         """

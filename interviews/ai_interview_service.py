@@ -38,23 +38,23 @@ class AIInterviewService:
         # Build system prompt
         self.system_prompt = self._build_system_prompt()
 
-        # Initialize Gemini model with system instruction
+        # ? Initialize Gemini model - use gemini-2.5-flash (good free tier)
         self.model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-2.5-flash",      # ? Changed from 1.5-flash (shutdown Mar 31)
             system_instruction=self.system_prompt,
             generation_config=genai.types.GenerationConfig(
                 temperature=0.7,
-                max_output_tokens=150,
+                max_output_tokens=300,           # ? Was 150 - too low, questions were cut off
             )
         )
 
-        # ── Load previous conversation from DB ───────────────
+        # -- Load previous conversation from DB ---------------
         history, q_count = self._load_history_from_db()
         self.chat = self.model.start_chat(history=history)
         self.questions_asked_count = q_count
 
     # ==========================================================
-    # HISTORY LOADER — key fix for multi-request persistence
+    # HISTORY LOADER - key fix for multi-request persistence
     # ==========================================================
     def _load_history_from_db(self):
         """
@@ -169,14 +169,15 @@ class AIInterviewService:
 4. **RESPONSE FORMAT & CONVERSATION FLOW:**
    - Listen carefully to the candidate's answer
    - If answer is GOOD and COMPLETE:
-     * Acknowledge positively: "Great answer!" or "That's interesting"
-     * Ask the next question
+     * Acknowledge positively in ONE short sentence: "Great answer!" or "That's interesting!"
+     * Then immediately ask the next question
    - If answer is VAGUE or INCOMPLETE:
      * Ask a follow-up: "Can you elaborate on that?" or "Can you give me a specific example?"
    - If answer is OFF-TOPIC:
      * Gently redirect: "I see. Let me rephrase - [repeat question]"
-   - Keep responses SHORT (2-3 sentences max)
+   - Keep responses to 2-4 sentences MAX (acknowledgment + next question)
    - Be CONVERSATIONAL and NATURAL
+   - ALWAYS end your response with a clear question for the candidate
 
 5. **ENDING:**
    - After 5-7 questions, conclude naturally
@@ -185,10 +186,11 @@ class AIInterviewService:
 
 **REMEMBER:**
 - This is VOICE - be conversational
-- Keep responses SHORT (2-3 sentences max)
+- Keep responses SHORT (2-4 sentences max)
 - Ask ONE question at a time
 - Be warm and encouraging
 - NEVER repeat questions you already asked
+- ALWAYS end with a question (except the final message)
 """
 
     def _get_candidate_resume(self) -> str:
@@ -223,12 +225,15 @@ class AIInterviewService:
     # ==========================================================
     def _chat_send(self, message: str) -> str:
         response = self.chat.send_message(message)
-        text = response.text
-        # Trim to first 2 sentences max for speed
+        text = response.text.strip()
+
+        # ? FIXED: Allow up to 4 sentences instead of 3
+        # Previous limit of 3 was cutting off questions mid-sentence
         sentences = text.replace('!', '.').replace('?', '.').split('.')
         sentences = [s.strip() for s in sentences if s.strip()]
-        if len(sentences) > 3:
-            text = '. '.join(sentences[:3]) + '.'
+        if len(sentences) > 5:
+            text = '. '.join(sentences[:5]) + '.'
+
         return text
 
     def start_interview(self) -> Dict:
@@ -278,5 +283,3 @@ class AIInterviewService:
             "message": "Interview completed successfully. Thank you for your time!",
             "total_questions_asked": self.questions_asked_count
         }
-
-
