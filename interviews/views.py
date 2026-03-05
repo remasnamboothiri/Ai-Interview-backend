@@ -1,5 +1,3 @@
-from django.shortcuts import render
-
 # Create your views here.
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -11,7 +9,7 @@ import logging
 from activity_logs.models import ActivityLog
 from notifications.models import Notification
 from interview_data.models import InterviewConversation
-from .result_generator import generate_interview_result  #newly added
+from .result_generator import generate_interview_result
 
 from .serializers import (
     InterviewSerializer,
@@ -20,20 +18,20 @@ from .serializers import (
     InterviewUpdateSerializer
 )
 
-# Import AI Interview Service
 from .ai_interview_service import AIInterviewService
 from .email_service import InterviewEmailService
 
 logger = logging.getLogger(__name__)
 
+
 class InterviewViewSet(viewsets.ModelViewSet):
     queryset = Interview.objects.all()
-    permission_classes = []  # No authentication for now
+    permission_classes = []
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['candidate__user__full_name', 'candidate__user__email', 'job__title']
     ordering_fields = ['scheduled_at', 'created_at', 'status']
     ordering = ['-scheduled_at']
-    
+
     def get_serializer_class(self):
         if self.action == 'create':
             return InterviewCreateSerializer
@@ -42,13 +40,10 @@ class InterviewViewSet(viewsets.ModelViewSet):
         elif self.action == 'retrieve':
             return InterviewDetailSerializer
         return InterviewSerializer
-    
+
     def get_queryset(self):
         try:
-            # Start with basic queryset
             queryset = Interview.objects.all()
-            
-            # Try to optimize with select_related, but catch any errors
             try:
                 queryset = queryset.select_related(
                     'job', 'candidate', 'candidate__user', 'agent', 'recruiter',
@@ -56,31 +51,27 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 )
             except Exception as e:
                 logger.warning(f"Could not use select_related: {e}")
-            
-            # Filter by status if provided
+
             status_param = self.request.query_params.get('status')
             if status_param:
                 queryset = queryset.filter(status=status_param)
-            
-            # Filter by job if provided
+
             job_id = self.request.query_params.get('job')
             if job_id:
                 queryset = queryset.filter(job_id=job_id)
-            
-            # Filter by candidate if provided
+
             candidate_id = self.request.query_params.get('candidate')
             if candidate_id:
                 queryset = queryset.filter(candidate_id=candidate_id)
-            
+
             logger.info(f"Returning queryset with {queryset.count()} interviews")
             return queryset
         except Exception as e:
             logger.error(f"Error in get_queryset: {e}")
             logger.exception("Full traceback:")
             return Interview.objects.none()
-    
+
     def create(self, request, *args, **kwargs):
-        """Override create to add detailed error logging"""
         try:
             logger.info(f"Creating interview with data: {request.data}")
             logger.info(f"User: {request.user}")
@@ -93,14 +84,13 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 {'error': str(e), 'detail': 'Failed to create interview'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
     def perform_create(self, serializer):
         from threading import Thread
-        
+
         try:
             interview = serializer.save()
-            
-            # ✅ Create activity log
+
             try:
                 user = self.request.user if self.request.user and self.request.user.pk else None
                 ActivityLog.objects.create(
@@ -117,8 +107,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 )
             except Exception as e:
                 print(f"Error creating activity log: {e}")
-            
-            # ✅ Create notification for candidate
+
             try:
                 if interview.candidate and interview.candidate.user:
                     Notification.objects.create(
@@ -133,8 +122,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
                     )
             except Exception as e:
                 print(f"Error creating candidate notification: {e}")
-            
-            # ✅ Create notification for recruiter
+
             try:
                 if interview.recruiter:
                     Notification.objects.create(
@@ -149,30 +137,25 @@ class InterviewViewSet(viewsets.ModelViewSet):
                     )
             except Exception as e:
                 print(f"Error creating recruiter notification: {e}")
-            
-            # ✅ Send interview invitation email IN BACKGROUND THREAD
+
             def send_email_async():
                 try:
                     InterviewEmailService.send_interview_invitation(interview.id)
                     logger.info(f"Interview invitation email sent for interview {interview.id}")
                 except Exception as e:
                     logger.error(f"Error sending interview invitation email: {e}")
-                    print(f"Error sending interview invitation email: {e}")
-            
-            # Start email sending in background thread to avoid timeout
+
             Thread(target=send_email_async, daemon=True).start()
-            
+
         except Exception as e:
             print(f"Error in perform_create: {e}")
             import traceback
             traceback.print_exc()
             raise
 
-    
     def perform_update(self, serializer):
         interview = serializer.save()
-        
-        # ✅ Create activity log for interview update
+
         try:
             user = self.request.user if self.request.user and self.request.user.pk else None
             ActivityLog.objects.create(
@@ -189,8 +172,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             print(f"Error creating activity log: {e}")
-        
-        # ✅ If interview is completed, create activity log
+
         if interview.status == 'completed':
             try:
                 user = self.request.user if self.request.user and self.request.user.pk else None
@@ -205,8 +187,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
                     },
                     ip_address=self.request.META.get('REMOTE_ADDR')
                 )
-                
-                # Notify recruiter that interview is completed
+
                 if interview.recruiter:
                     Notification.objects.create(
                         user=interview.recruiter,
@@ -220,25 +201,23 @@ class InterviewViewSet(viewsets.ModelViewSet):
                     )
             except Exception as e:
                 print(f"Error creating completion log/notification: {e}")
-    
+
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
-        """Cancel an interview"""
         interview = self.get_object()
-        
+
         if interview.status == 'cancelled':
             return Response(
                 {'error': 'Interview is already cancelled'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         interview.status = 'cancelled'
         interview.cancelled_at = timezone.now()
         interview.cancelled_by = request.user if request.user and request.user.pk else None
         interview.cancellation_reason = request.data.get('cancellation_reason', '')
         interview.save()
-        
-        # ✅ Create activity log
+
         try:
             user = request.user if request.user and request.user.pk else None
             ActivityLog.objects.create(
@@ -255,8 +234,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             print(f"Error creating activity log: {e}")
-        
-        # ✅ Notify candidate
+
         try:
             if interview.candidate and interview.candidate.user:
                 Notification.objects.create(
@@ -270,8 +248,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 )
         except Exception as e:
             print(f"Error creating notification: {e}")
-        
-        # ✅ Notify recruiter
+
         try:
             if interview.recruiter:
                 Notification.objects.create(
@@ -285,28 +262,26 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 )
         except Exception as e:
             print(f"Error creating recruiter notification: {e}")
-        
+
         serializer = self.get_serializer(interview)
         return Response(serializer.data)
-    
+
     @action(detail=True, methods=['post'])
     def reschedule(self, request, pk=None):
-        """Reschedule an interview"""
         interview = self.get_object()
-        
+
         new_time = request.data.get('scheduled_at')
         if not new_time:
             return Response(
                 {'error': 'scheduled_at is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         old_time = interview.scheduled_at
         interview.scheduled_at = new_time
         interview.updated_by = request.user if request.user and request.user.pk else None
         interview.save()
-        
-        # ✅ Create activity log
+
         try:
             user = request.user if request.user and request.user.pk else None
             ActivityLog.objects.create(
@@ -324,8 +299,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             print(f"Error creating activity log: {e}")
-        
-        # ✅ Notify candidate
+
         try:
             if interview.candidate and interview.candidate.user:
                 Notification.objects.create(
@@ -340,8 +314,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 )
         except Exception as e:
             print(f"Error creating candidate notification: {e}")
-        
-        # ✅ Notify recruiter
+
         try:
             if interview.recruiter:
                 Notification.objects.create(
@@ -356,23 +329,21 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 )
         except Exception as e:
             print(f"Error creating recruiter notification: {e}")
-        
+
         serializer = self.get_serializer(interview)
         return Response(serializer.data)
-    
+
     @action(detail=False, methods=['get'])
     def test(self, request):
-        """Test endpoint to verify API is working"""
         return Response({
             'status': 'ok',
             'user_has_pk': hasattr(request.user, 'pk') and request.user.pk is not None,
             'user': str(request.user),
             'interview_count': Interview.objects.count()
         })
-    
+
     @action(detail=False, methods=['get'])
     def upcoming(self, request):
-        """Get upcoming interviews"""
         now = timezone.now()
         interviews = self.get_queryset().filter(
             scheduled_at__gte=now,
@@ -380,51 +351,46 @@ class InterviewViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(interviews, many=True)
         return Response(serializer.data)
-    
+
     @action(detail=False, methods=['get'])
     def by_job(self, request):
-        """Get interviews for a specific job"""
         job_id = request.query_params.get('job_id')
         if not job_id:
             return Response(
                 {'error': 'job_id parameter is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
         interviews = self.get_queryset().filter(job_id=job_id)
         serializer = self.get_serializer(interviews, many=True)
         return Response(serializer.data)
-    
+
     @action(detail=False, methods=['get'])
     def by_candidate(self, request):
-        """Get interviews for a specific candidate"""
         candidate_id = request.query_params.get('candidate_id')
         if not candidate_id:
             return Response(
                 {'error': 'candidate_id parameter is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
         interviews = self.get_queryset().filter(candidate_id=candidate_id)
         serializer = self.get_serializer(interviews, many=True)
         return Response(serializer.data)
-    
+
     # ========================================
     # UUID LOOKUP ENDPOINT
     # ========================================
-    
+
     @action(detail=False, methods=['get'], url_path='by-uuid/(?P<uuid>[0-9a-f-]+)')
     def by_uuid(self, request, uuid=None):
         """
-        Lookup interview by UUID — used by candidate interview room
-        GET /api/interviews/by-uuid/<uuid>/
-        Returns interview ID and basic details needed to start the interview
+        Lookup interview by UUID — used by candidate interview room.
+        Also returns candidate_name so frontend can display real name.
         """
         try:
             interview = Interview.objects.select_related(
                 'job', 'candidate', 'candidate__user', 'agent'
             ).get(uuid=uuid)
-            
+
             return Response({
                 'id': interview.id,
                 'uuid': str(interview.uuid),
@@ -447,54 +413,80 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 {'error': 'Failed to load interview'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
     # ========================================
     # AI INTERVIEW ENDPOINTS
     # ========================================
-    
+
     @action(detail=True, methods=['post'])
     def start_interview(self, request, pk=None):
         """
-        Start AI interview - Initialize conversation and return first question
-        POST /api/interviews/{id}/start_interview/
+        Start AI interview — IDEMPOTENT.
+        If called twice (React StrictMode), returns existing greeting
+        instead of creating a duplicate.
         """
         try:
             interview = self.get_object()
-            
-            # ✅ BETTER: Allow starting if scheduled OR in_progress (for resume/refresh)
+
             if interview.status not in ['scheduled', 'in_progress']:
                 return Response(
                     {'error': f'Interview cannot be started. Current status: {interview.status}. Only scheduled or in-progress interviews can be started.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
-            # Update interview status to in_progress
+
+            # ── IDEMPOTENT CHECK: If AI already sent a greeting, return it ──
+            existing_ai_msg = InterviewConversation.objects.filter(
+                interview=interview,
+                speaker='ai'
+            ).order_by('timestamp').first()
+
+            if existing_ai_msg:
+                # Already started — return existing greeting (no duplicate)
+                ai_message_count = InterviewConversation.objects.filter(
+                    interview=interview,
+                    speaker='ai'
+                ).count()
+
+                logger.info(f"Interview {interview.id} already started, returning existing greeting")
+
+                # Get reference questions count for total_questions
+                ai_service = AIInterviewService(interview.id)
+
+                return Response({
+                    'success': True,
+                    'interview_id': interview.id,
+                    'status': interview.status,
+                    'message': existing_ai_msg.message,
+                    'current_question': existing_ai_msg.message,
+                    'question_number': ai_message_count,
+                    'total_questions': len(ai_service.reference_questions) + 2,
+                    'is_complete': False,
+                })
+
+            # ── First time: Update status and generate greeting ──
             if interview.status == 'scheduled':
                 interview.status = 'in_progress'
                 interview.save()
-            
-            # Initialize AI Interview Service
+
             ai_service = AIInterviewService(interview.id)
-            
-            # Start interview and get first question
             result = ai_service.start_interview()
-            
-            # Save AI's first message to interview_conversations
+
+            # Save AI's first message
             InterviewConversation.objects.create(
                 interview=interview,
                 speaker='ai',
                 message=result['message']
             )
-            
+
             logger.info(f"Interview {interview.id} started successfully")
-            
+
             return Response({
                 'success': True,
                 'interview_id': interview.id,
                 'status': interview.status,
                 **result
             })
-            
+
         except Interview.DoesNotExist:
             return Response(
                 {'error': 'Interview not found'},
@@ -506,62 +498,57 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 {'error': f'Failed to start interview: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
     @action(detail=True, methods=['post'])
     def send_message(self, request, pk=None):
         """
-        Send candidate's answer and get AI's response
-        POST /api/interviews/{id}/send_message/
-        Body: {"message": "candidate's answer"}
+        Send candidate's answer and get AI's response.
         """
         try:
             interview = self.get_object()
-            
-            # Check if interview is in progress
+
             if interview.status != 'in_progress':
                 return Response(
                     {'error': f'Interview is not in progress. Current status: {interview.status}'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
-            # Get candidate's message
+
             candidate_message = request.data.get('message')
             if not candidate_message:
                 return Response(
                     {'error': 'message field is required'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
+
             # Save candidate's message
             InterviewConversation.objects.create(
                 interview=interview,
                 speaker='candidate',
                 message=candidate_message
             )
-            
+
             # Get AI response
             ai_service = AIInterviewService(interview.id)
             result = ai_service.send_message(candidate_message)
-            
+
             # Save AI's response
             InterviewConversation.objects.create(
                 interview=interview,
                 speaker='ai',
                 message=result['message']
             )
-            
-            # If interview is complete, update status
+
             if result.get('is_complete'):
                 interview.status = 'completed'
                 interview.save()
                 logger.info(f"Interview {interview.id} completed")
-            
+
             return Response({
                 'success': True,
                 'interview_id': interview.id,
                 **result
             })
-            
+
         except Interview.DoesNotExist:
             return Response(
                 {'error': 'Interview not found'},
@@ -573,17 +560,17 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 {'error': f'Failed to process message: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
     @action(detail=True, methods=['post'])
     def end_interview(self, request, pk=None):
-        """End the interview and generate result"""
+        """End the interview and generate result."""
         try:
             interview = self.get_object()
-            
+
             if interview.status == 'in_progress':
                 interview.status = 'completed'
                 interview.save()
-            
+
             user = request.user if request.user and request.user.pk else None
             try:
                 result = generate_interview_result(interview.id, user)
@@ -595,7 +582,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 logger.error(f"Result generation failed: {e}")
                 result_data = {'result_generation_error': str(e)}
-            
+
             try:
                 user_log = request.user if request.user and request.user.pk else None
                 ActivityLog.objects.create(
@@ -611,7 +598,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 )
             except Exception as e:
                 logger.error(f"Error creating activity log: {e}")
-            
+
             return Response({
                 'success': True,
                 'interview_id': interview.id,
@@ -619,7 +606,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 'message': 'Interview completed and result generated.',
                 **result_data
             })
-            
+
         except Interview.DoesNotExist:
             return Response({'error': 'Interview not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:

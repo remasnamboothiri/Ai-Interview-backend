@@ -1,15 +1,18 @@
 """
 Interview Result Generator
-Auto-generates InterviewResult after interview completes by using
-Gemini AI to evaluate the conversation transcript.
-Now includes screenshot analysis and cheating detection.
+Auto-generates InterviewResult after interview completes.
+Uses DeepSeek AI via LangChain for transcript evaluation.
+Screenshot analysis uses client-side detection metadata (no vision API needed).
+
+Requires: pip install langchain-openai
+Env var:  DEEPSEEK_API_KEY=your-deepseek-api-key
 """
-import os  
-import google.generativeai as genai
 import json
 import logging
 from decimal import Decimal
 from django.utils import timezone
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage
 from decouple import config
 from interview_data.models import InterviewConversation
 from interview_results.models import InterviewResult
@@ -53,12 +56,12 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
 
     transcript = "\n\n".join(transcript_lines)
 
-    # Get screenshots for cheating detection
-    screenshot_analysis = _analyze_screenshots(interview_id)
+    # Analyze screenshots using client-side metadata (no vision API)
+    screenshot_analysis = _analyze_screenshots_from_metadata(interview_id)
 
-    # Use AI to evaluate transcript
+    # Use DeepSeek via LangChain to evaluate transcript
     try:
-        evaluation = _evaluate_with_ai(interview, transcript, screenshot_analysis)
+        evaluation = _evaluate_with_deepseek(interview, transcript, screenshot_analysis)
     except Exception as e:
         logger.error(f"AI evaluation failed for interview {interview_id}: {e}")
         logger.exception("Full traceback:")
@@ -70,7 +73,6 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
         existing_flags = evaluation.get('red_flags', [])
         evaluation['red_flags'] = existing_flags + cheating_flags
 
-        # If cheating detected, override recommendation to reject
         if screenshot_analysis.get('severity') == 'high':
             evaluation['recommendation'] = 'reject'
             evaluation['overall_score'] = min(
@@ -112,9 +114,11 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
     return result
 
 
-def _analyze_screenshots(interview_id: int) -> dict:
+def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
     """
-    Analyze screenshots for cheating detection using Gemini Vision.
+    Analyze screenshots using client-side detection metadata.
+    No vision API needed — reads face_count, issue_type, and metadata
+    fields that were set by the frontend during the interview.
     """
     try:
         from interview_screenshots.models import InterviewScreenshot
@@ -130,108 +134,69 @@ def _analyze_screenshots(interview_id: int) -> dict:
             return {
                 'cheating_detected': False,
                 'cheating_flags': [],
-                'total_screenshots': total,
-                'note': 'No screenshots captured during interview'
+                'total_screenshots': 0,
+                'screenshots_analyzed': 0,
+                'screenshot_urls': [],
+                'multiple_person_count': 0,
+                'phone_detected_count': 0,
+                'looking_away_count': 0,
+                'note': 'No screenshots captured during interview',
             }
 
-        genai.configure(api_key=config('GEMINI_API_KEY'))
-        model = genai.GenerativeModel('gemini-2.5-flash')  # ✅ Changed from 1.5-flash
-
-        cheating_flags = []
         screenshot_urls = []
         multiple_person_count = 0
         phone_detected_count = 0
         looking_away_count = 0
 
-        # Pick up to 10 evenly spaced screenshots
-        step = max(1, total // 10)
-        screenshots_to_analyze = list(screenshots)[::step][:10]
-        analyzed_count = 0
+        for ss in screenshots:
+            # Collect URLs for display (up to 5)
+            if ss.screenshot_url and len(screenshot_urls) < 5:
+                screenshot_urls.append(ss.screenshot_url)
 
-        for screenshot in screenshots_to_analyze:
-            try:
-                file_url = screenshot.screenshot_url
-                if not file_url:
-                    continue
+            # Count multiple faces (from face-api.js detection)
+            if ss.face_count and ss.face_count > 1:
+                multiple_person_count += 1
+            elif ss.multiple_people_detected:
+                multiple_person_count += 1
 
-                screenshot_urls.append(file_url)
+            # Check metadata for phone/gaze detection (from COCO-SSD + face landmarks)
+            meta = ss.metadata if isinstance(ss.metadata, dict) else {}
+            if isinstance(ss.metadata, str):
+                try:
+                    meta = json.loads(ss.metadata)
+                except (json.JSONDecodeError, TypeError):
+                    meta = {}
 
-                from django.conf import settings
-                relative_path = file_url.lstrip('/')
-                if relative_path.startswith('media/'):
-                    relative_path = relative_path[6:]
-                file_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+            if meta.get('phone_detected'):
+                phone_detected_count += 1
 
-                if not os.path.exists(file_path):
-                    logger.warning(f"Screenshot file not found: {file_path}")
-                    continue
+            if meta.get('looking_away'):
+                looking_away_count += 1
 
-                import base64
-                with open(file_path, 'rb') as f:
-                    image_data = f.read()
+            # Also check issue_type field
+            issue = ss.issue_type or ''
+            if 'phone' in issue.lower():
+                phone_detected_count += 1
+            if 'looking_away' in issue.lower() or 'gaze' in issue.lower():
+                looking_away_count += 1
 
-                image_part = {
-                    "mime_type": "image/jpeg",
-                    "data": base64.b64encode(image_data).decode()
-                }
+        # Build cheating flags
+        cheating_flags = []
 
-                prompt = """Analyze this interview webcam screenshot carefully.
-Check for these specific issues:
-1. Are there multiple people visible (not just the candidate)?
-2. Is a phone or mobile device visible or being used?
-3. Is the candidate clearly looking away from the screen for a long time?
-4. Is the candidate absent or is the camera blocked?
-
-Respond ONLY with this exact JSON format:
-{
-    "multiple_persons": true or false,
-    "phone_detected": true or false,
-    "looking_away": true or false,
-    "not_present": true or false,
-    "notes": "one sentence describing what you see"
-}"""
-
-                response = model.generate_content([prompt, image_part])
-                text = response.text.strip()
-
-                # Clean JSON markers
-                if '```' in text:
-                    text = text.split('```')[1] if '```' in text else text
-                    if text.startswith('json'):
-                        text = text[4:]
-                text = text.strip()
-
-                analysis = json.loads(text)
-                analyzed_count += 1
-
-                if analysis.get('multiple_persons'):
-                    multiple_person_count += 1
-                if analysis.get('phone_detected'):
-                    phone_detected_count += 1
-                if analysis.get('looking_away'):
-                    looking_away_count += 1
-
-                logger.info(f"Screenshot analyzed: {analysis.get('notes', '')}")
-
-            except Exception as e:
-                logger.warning(f"Could not analyze screenshot {screenshot.id}: {e}")
-                continue
-
-        # Determine cheating flags
         if multiple_person_count >= 2:
             cheating_flags.append(
-                f"Multiple people detected in {multiple_person_count} screenshots — "
-                f"possible external assistance"
+                f"Multiple people detected in {multiple_person_count} screenshots "
+                f"— possible external assistance"
             )
         if phone_detected_count >= 1:
             cheating_flags.append(
-                f"Mobile phone detected in {phone_detected_count} screenshots — "
-                f"possible use of external resources"
+                f"Mobile phone detected in {phone_detected_count} screenshots "
+                f"— possible use of external resources"
             )
         if looking_away_count >= 3:
             cheating_flags.append(
-                f"Candidate looking away from screen in {looking_away_count} screenshots — "
-                f"possible reading from external material"
+                f"Candidate looking away in {looking_away_count} screenshots "
+                f"— possible reading from external material"
             )
 
         cheating_detected = len(cheating_flags) > 0
@@ -242,27 +207,33 @@ Respond ONLY with this exact JSON format:
             'severity': severity,
             'cheating_flags': cheating_flags,
             'total_screenshots': total,
-            'screenshots_analyzed': analyzed_count,
-            'screenshot_urls': screenshot_urls[:5],
+            'screenshots_analyzed': total,
+            'screenshot_urls': screenshot_urls,
             'multiple_person_count': multiple_person_count,
             'phone_detected_count': phone_detected_count,
             'looking_away_count': looking_away_count,
         }
 
     except Exception as e:
-        logger.error(f"Screenshot analysis failed: {e}")
+        logger.error(f"Screenshot metadata analysis failed: {e}")
         logger.exception("Full traceback:")
         return {
             'cheating_detected': False,
             'cheating_flags': [],
             'total_screenshots': 0,
-            'error': str(e)
+            'error': str(e),
         }
 
 
-def _evaluate_with_ai(interview, transcript: str, screenshot_analysis: dict = None) -> dict:
-    """Use Gemini to evaluate the interview transcript."""
-    genai.configure(api_key=config('GEMINI_API_KEY'))
+def _evaluate_with_deepseek(interview, transcript: str, screenshot_analysis: dict = None) -> dict:
+    """Use DeepSeek via LangChain to evaluate the interview transcript."""
+    llm = ChatOpenAI(
+        model="deepseek-chat",
+        api_key=config('DEEPSEEK_API_KEY'),
+        base_url="https://api.deepseek.com",
+        temperature=0.3,
+        max_tokens=2000,
+    )
 
     job = interview.job
     candidate = interview.candidate
@@ -272,7 +243,7 @@ def _evaluate_with_ai(interview, transcript: str, screenshot_analysis: dict = No
     if screenshot_analysis and screenshot_analysis.get('cheating_detected'):
         cheating_context = f"""
 **IMPORTANT — Integrity Issues Detected:**
-The following issues were detected via screenshot analysis:
+The following issues were detected via automated monitoring:
 {chr(10).join(f"- {flag}" for flag in screenshot_analysis.get('cheating_flags', []))}
 Please factor these integrity concerns into your evaluation.
 """
@@ -294,22 +265,21 @@ Please factor these integrity concerns into your evaluation.
 {transcript}
 
 **IMPORTANT INSTRUCTIONS:**
-- Evaluate EACH candidate individually based on their actual answers
+- Evaluate based on the candidate's actual answers
 - Do NOT use generic responses
-- Base scores ONLY on what THIS candidate actually said
 - Be specific about their actual strengths and weaknesses
 - If transcript is short, note that but still evaluate what was said
 
-**Evaluate and respond with ONLY valid JSON (no markdown, no code blocks):**
+**Respond with ONLY valid JSON (no markdown, no code blocks):**
 {{
     "overall_score": <number 1-10>,
     "technical_score": <number 1-10>,
     "communication_score": <number 1-10>,
     "cultural_fit_score": <number 1-10>,
     "behavioral_score": <number 1-10>,
-    "strengths": ["specific strength from their actual answers", "another specific strength"],
-    "weaknesses": ["specific area they need to improve based on their answers"],
-    "red_flags": ["any concerns, or empty array if none"],
+    "strengths": ["specific strength from their answers"],
+    "weaknesses": ["specific area to improve"],
+    "red_flags": ["concerns, or empty array"],
     "recommendation": "<hire|reject|maybe|second_round>",
     "interview_quality": <number 1-10>,
     "technical_depth": <number 1-10>,
@@ -319,33 +289,30 @@ Please factor these integrity concerns into your evaluation.
         "clarity": "<high|medium|low>"
     }},
     "skill_assessment": {{
-        "relevant_skills_demonstrated": ["actual skills they showed"],
-        "missing_skills": ["skills needed but not demonstrated"]
+        "relevant_skills_demonstrated": ["skills shown"],
+        "missing_skills": ["skills not demonstrated"]
     }},
     "ai_feedback": {{
-        "summary": "2-3 sentence assessment specific to THIS candidate's performance",
-        "hiring_justification": "1-2 sentence justification based on their actual answers"
+        "summary": "2-3 sentence assessment of THIS candidate",
+        "hiring_justification": "1-2 sentence justification"
     }}
 }}
 
 Score Guidelines:
-- 8-10: Excellent candidate, strong hire
-- 6-7: Good candidate, potential hire
+- 8-10: Excellent, strong hire
+- 6-7: Good, potential hire
 - 4-5: Average, needs further evaluation
 - 1-3: Below expectations, likely reject"""
 
-    model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",  # ✅ Changed from 1.5-flash
-        generation_config=genai.types.GenerationConfig(
-            temperature=0.3,
-            max_output_tokens=8000,
-        )
-    )
+    messages = [
+        SystemMessage(content="You are an expert interview evaluator. Always respond with valid JSON only, no markdown."),
+        HumanMessage(content=prompt),
+    ]
 
-    response = model.generate_content(prompt)
-    text = response.text.strip()
+    response = llm.invoke(messages)
+    text = response.content.strip()
 
-    # Clean up response
+    # Clean up response (remove markdown code fences if present)
     if text.startswith('```'):
         lines = text.split('\n')
         text = '\n'.join(lines[1:]) if len(lines) > 1 else text[3:]
@@ -353,15 +320,14 @@ Score Guidelines:
         text = text[:-3]
     text = text.strip()
 
-    # Log raw response for debugging
-    logger.info(f"Gemini raw response (first 300 chars): {text[:300]}")
+    logger.info(f"DeepSeek raw response (first 300 chars): {text[:300]}")
 
     try:
         evaluation = json.loads(text)
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse AI evaluation JSON: {e}")
         logger.error(f"Raw text: {text[:500]}")
-        raise  # Re-raise so caller can use fallback
+        raise
 
     # Clamp scores
     for key in ['overall_score', 'technical_score', 'communication_score',

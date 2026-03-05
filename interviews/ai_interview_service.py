@@ -1,10 +1,14 @@
 """
 AI Interview Service
-Handles AI-powered interview conversations using Google Gemini directly (no LangChain)
+Handles AI-powered interview conversations using DeepSeek via LangChain.
 Loads conversation history from DB on every request so AI remembers context.
+
+Requires: pip install langchain-openai
+Env var:  DEEPSEEK_API_KEY=your-deepseek-api-key
 """
 
-import google.generativeai as genai
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from typing import Dict, List
 from decouple import config
 from .models import Interview
@@ -19,9 +23,8 @@ logger = logging.getLogger(__name__)
 
 class AIInterviewService:
     """
-    AI Interview Service for conducting voice-based conversational interviews.
-    Reloads full conversation history from DB on each instantiation so the AI
-    never loses context between HTTP requests.
+    AI Interview Service using DeepSeek via LangChain ChatOpenAI.
+    Reloads full conversation history from DB on each instantiation.
     """
 
     def __init__(self, interview_id: int):
@@ -29,8 +32,14 @@ class AIInterviewService:
             'job', 'candidate', 'candidate__user', 'agent'
         ).get(id=interview_id)
 
-        # Configure Gemini
-        genai.configure(api_key=config('GEMINI_API_KEY'))
+        # Initialize DeepSeek via LangChain (OpenAI-compatible)
+        self.llm = ChatOpenAI(
+            model="deepseek-chat",
+            api_key=config('DEEPSEEK_API_KEY'),
+            base_url="https://api.deepseek.com",
+            temperature=0.7,
+            max_tokens=300,
+        )
 
         # Get reference questions
         self.reference_questions = self._get_reference_questions()
@@ -38,30 +47,23 @@ class AIInterviewService:
         # Build system prompt
         self.system_prompt = self._build_system_prompt()
 
-        # ? Initialize Gemini model - use gemini-2.5-flash (good free tier)
-        self.model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",      # ? Changed from 1.5-flash (shutdown Mar 31)
-            system_instruction=self.system_prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.7,
-                max_output_tokens=300,           # ? Was 150 - too low, questions were cut off
-            )
-        )
+        # Initialize messages with system prompt
+        self.messages: List = [
+            SystemMessage(content=self.system_prompt)
+        ]
 
-        # -- Load previous conversation from DB ---------------
+        # Load previous conversation from DB
         history, q_count = self._load_history_from_db()
-        self.chat = self.model.start_chat(history=history)
+        self.messages.extend(history)
         self.questions_asked_count = q_count
 
     # ==========================================================
-    # HISTORY LOADER - key fix for multi-request persistence
+    # HISTORY LOADER
     # ==========================================================
     def _load_history_from_db(self):
         """
         Load all previous InterviewConversation rows and convert them
-        into Gemini chat history format so the model remembers everything.
-        
-        Returns (history_list, questions_asked_count)
+        into LangChain message format so the model remembers everything.
         """
         conversations = InterviewConversation.objects.filter(
             interview=self.interview
@@ -73,37 +75,20 @@ class AIInterviewService:
         history = []
         ai_count = 0
 
-        # Gemini requires the first message in history to be role="user".
-        # The first DB entry is the AI greeting. We prepend the synthetic
-        # intro prompt that originally triggered it.
-        first = conversations.first()
-        if first and first.speaker == 'ai':
-            candidate_name = self.interview.candidate.user.full_name.split()[0]
-            job_title = self.interview.job.title
-            history.append({
-                "role": "user",
-                "parts": [
-                    f"This is the START of the interview. "
-                    f"Greet the candidate warmly using their first name ({candidate_name}) "
-                    f"and the job title ({job_title}). Keep it SHORT and CONVERSATIONAL."
-                ]
-            })
-
         for conv in conversations:
             if conv.speaker == 'ai':
-                # Avoid two consecutive "model" entries
-                if history and history[-1]["role"] == "model":
-                    # Merge with previous model message
-                    history[-1]["parts"][0] += "\n" + conv.message
+                # Avoid two consecutive AI entries
+                if history and isinstance(history[-1], AIMessage):
+                    history[-1].content += "\n" + conv.message
                 else:
-                    history.append({"role": "model", "parts": [conv.message]})
+                    history.append(AIMessage(content=conv.message))
                 ai_count += 1
             else:
-                # Avoid two consecutive "user" entries
-                if history and history[-1]["role"] == "user":
-                    history[-1]["parts"][0] += "\n" + conv.message
+                # Avoid two consecutive Human entries
+                if history and isinstance(history[-1], HumanMessage):
+                    history[-1].content += "\n" + conv.message
                 else:
-                    history.append({"role": "user", "parts": [conv.message]})
+                    history.append(HumanMessage(content=conv.message))
 
         logger.info(
             f"Loaded {len(conversations)} messages for interview {self.interview.id} "
@@ -164,20 +149,13 @@ class AIInterviewService:
    - Keep questions clear and concise
    - Ask 5-7 questions total
    - NEVER repeat a question you already asked
-   - Keep track of how many questions you've asked
 
 4. **RESPONSE FORMAT & CONVERSATION FLOW:**
-   - Listen carefully to the candidate's answer
-   - If answer is GOOD and COMPLETE:
-     * Acknowledge positively in ONE short sentence: "Great answer!" or "That's interesting!"
-     * Then immediately ask the next question
-   - If answer is VAGUE or INCOMPLETE:
-     * Ask a follow-up: "Can you elaborate on that?" or "Can you give me a specific example?"
-   - If answer is OFF-TOPIC:
-     * Gently redirect: "I see. Let me rephrase - [repeat question]"
-   - Keep responses to 2-4 sentences MAX (acknowledgment + next question)
-   - Be CONVERSATIONAL and NATURAL
-   - ALWAYS end your response with a clear question for the candidate
+   - If answer is GOOD: Acknowledge in ONE sentence, then ask next question
+   - If answer is VAGUE: Ask a follow-up for clarification
+   - If answer is OFF-TOPIC: Gently redirect
+   - Keep responses to 2-4 sentences MAX
+   - ALWAYS end with a question for the candidate
 
 5. **ENDING:**
    - After 5-7 questions, conclude naturally
@@ -189,8 +167,8 @@ class AIInterviewService:
 - Keep responses SHORT (2-4 sentences max)
 - Ask ONE question at a time
 - Be warm and encouraging
-- NEVER repeat questions you already asked
-- ALWAYS end with a question (except the final message)
+- NEVER repeat questions
+- ALWAYS end with a question (except final message)
 """
 
     def _get_candidate_resume(self) -> str:
@@ -224,11 +202,15 @@ class AIInterviewService:
     # CHAT
     # ==========================================================
     def _chat_send(self, message: str) -> str:
-        response = self.chat.send_message(message)
-        text = response.text.strip()
+        self.messages.append(HumanMessage(content=message))
 
-        # ? FIXED: Allow up to 4 sentences instead of 3
-        # Previous limit of 3 was cutting off questions mid-sentence
+        response = self.llm.invoke(self.messages)
+        text = response.content.strip()
+
+        # Store assistant response in message history
+        self.messages.append(AIMessage(content=text))
+
+        # Trim to max 5 sentences for voice
         sentences = text.replace('!', '.').replace('?', '.').split('.')
         sentences = [s.strip() for s in sentences if s.strip()]
         if len(sentences) > 5:
