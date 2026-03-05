@@ -9,6 +9,9 @@ from .models import InterviewScreenshot
 from .serializers import InterviewScreenshotSerializer, InterviewScreenshotCreateSerializer
 from interviews.models import Interview
 
+from decouple import config
+
+
 import os
 import json
 import time
@@ -199,7 +202,9 @@ class InterviewScreenshotViewSet(viewsets.ModelViewSet):
         with open(filepath, 'wb+') as destination:
             for chunk in file.chunks():
                 destination.write(chunk)
-        return f"/media/screenshots/{interview_id}/{filename}"
+        #return f"/media/screenshots/{interview_id}/{filename}"
+        base_url = config('BACKEND_URL', default='http://localhost:8000')
+        return f"{base_url}/media/screenshots/{interview_id}/{filename}"
 
     def _get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
