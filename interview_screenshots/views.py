@@ -213,28 +213,28 @@ class InterviewScreenshotViewSet(viewsets.ModelViewSet):
     
     def _save_screenshot_file(self, file, interview_id):
     # Save file to disk (same as before)
-    screenshots_dir = os.path.join(settings.MEDIA_ROOT, 'screenshots', str(interview_id))
-    os.makedirs(screenshots_dir, exist_ok=True)
+        screenshots_dir = os.path.join(settings.MEDIA_ROOT, 'screenshots', str(interview_id))
+        os.makedirs(screenshots_dir, exist_ok=True)
     
-    timestamp = int(time.time() * 1000)
-    filename = f"screenshot_{timestamp}_{file.name}"
-    filepath = os.path.join(screenshots_dir, filename)
+        timestamp = int(time.time() * 1000)
+        filename = f"screenshot_{timestamp}_{file.name}"
+        filepath = os.path.join(screenshots_dir, filename)
     
-    # Write file to disk (same as before)
-    with open(filepath, 'wb+') as destination:
-        for chunk in file.chunks():
-            destination.write(chunk)
+        # Write file to disk (same as before)
+        with open(filepath, 'wb+') as destination:
+            for chunk in file.chunks():
+                destination.write(chunk)
     
-    # ✅ FIX: Build ABSOLUTE URL using environment variable
-    backend_url = config('BACKEND_URL', default='http://localhost:8000')
-    #            ↑ Gets backend URL from .env file
+        # ✅ FIX: Build ABSOLUTE URL using environment variable
+        backend_url = config('BACKEND_URL', default='http://localhost:8000')
+        #            ↑ Gets backend URL from .env file
     
-    # Remove trailing slash if present
-    backend_url = backend_url.rstrip('/')
+        # Remove trailing slash if present
+        backend_url = backend_url.rstrip('/')
     
-    # Return FULL URL with domain
-    return f"{backend_url}/media/screenshots/{interview_id}/{filename}"
-    #       ↑ Complete URL with domain!
+        # Return FULL URL with domain
+        return f"{backend_url}/media/screenshots/{interview_id}/{filename}"
+        #       ↑ Complete URL with domain!
 
 
     def _get_client_ip(self, request):
