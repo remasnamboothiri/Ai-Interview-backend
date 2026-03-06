@@ -349,33 +349,34 @@ Score Guidelines:
 def _default_evaluation() -> dict:
     """Fallback evaluation if AI fails."""
     return {
-        'overall_score': 5.0,
-        'technical_score': 5.0,
-        'communication_score': 5.0,
-        'cultural_fit_score': 5.0,
-        'behavioral_score': 5.0,
+        'overall_score': 0.0,
+        'technical_score': 0.0,
+        'communication_score': 0.0,
+        'cultural_fit_score': 0.0,
+        'behavioral_score': 0.0,
         'strengths': [],
-        'weaknesses': [],
-        'red_flags': [],
-        'recommendation': 'maybe',
-        'interview_quality': 5,
-        'technical_depth': 5,
+        'weaknesses': ['Evaluation could not be completed due to a system error'],
+        'red_flags': ['⚠ AI evaluation failed — scores are not valid, manual review required'],
+        'recommendation': 'manual_review',
+        'interview_quality': 0,
+        'technical_depth': 0,
         'behavioral_analysis': {
-            'confidence_level': 'medium',
-            'engagement': 'medium',
-            'clarity': 'medium'
+            'confidence_level': 'unknown',
+            'engagement': 'unknown',
+            'clarity': 'unknown'
         },
         'skill_assessment': {
             'relevant_skills_demonstrated': [],
             'missing_skills': []
         },
         'ai_feedback': {
-            'summary': 'AI evaluation could not be completed. Please review the transcript manually.',
-            'hiring_justification': 'Manual review of transcript recommended.'
+            'summary': '⚠ AI evaluation failed. Please review the transcript manually.',
+            'hiring_justification': 'System error occurred during evaluation. Manual review required.',
+            'evaluation_error': True,
         }
     }
 
-
+    
 def _create_empty_result(interview, user=None) -> InterviewResult:
     """Create a minimal result when no conversation exists."""
     evaluation = _default_evaluation()
