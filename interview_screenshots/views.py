@@ -191,28 +191,10 @@ class InterviewScreenshotViewSet(viewsets.ModelViewSet):
                 'message': 'Screenshot upload failed but interview continues'
             }, status=status.HTTP_200_OK)
 
-    # def _save_screenshot_file(self, file, interview_id):
-    #     screenshots_dir = os.path.join(settings.MEDIA_ROOT, 'screenshots', str(interview_id))
-    #     os.makedirs(screenshots_dir, exist_ok=True)
-    #     timestamp = int(time.time() * 1000)
-    #     filename = f"screenshot_{timestamp}_{file.name}"
-    #     filepath = os.path.join(screenshots_dir, filename)
-    #     with open(filepath, 'wb+') as destination:
-    #         for chunk in file.chunks():
-    #             destination.write(chunk)
-
-    #     # :white_check_mark: FIX: Build absolute URL using BACKEND_URL env var so screenshots
-    #     # load correctly in production (Render, etc.) and not just localhost.
-    #     # The old relative path (/media/screenshots/...) was stored in the DB
-    #     # and the frontend's onError retry only checked for 'localhost:8000',
-    #     # which is never present in the production URL — causing all images to fail silently.
-    #     backend_url = config('BACKEND_URL', default='http://localhost:8000')
-    #     # Ensure no trailing slash on base URL
-    #     backend_url = backend_url.rstrip('/')
-    #     return f"{backend_url}/media/screenshots/{interview_id}/{filename}"
+    
     
     def _save_screenshot_file(self, file, interview_id):
-    # Save file to disk (same as before)
+        # Save file to disk (same as before)
         screenshots_dir = os.path.join(settings.MEDIA_ROOT, 'screenshots', str(interview_id))
         os.makedirs(screenshots_dir, exist_ok=True)
     
