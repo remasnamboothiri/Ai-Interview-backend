@@ -143,23 +143,14 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
                 'note': 'No screenshots captured during interview',
             }
 
-        screenshot_urls = []
+        flagged_urls = []
+        normal_urls = []
         multiple_person_count = 0
         phone_detected_count = 0
         looking_away_count = 0
 
         for ss in screenshots:
-            # Collect URLs for display (up to 5)
-            if ss.screenshot_url and len(screenshot_urls) < 5:
-                screenshot_urls.append(ss.screenshot_url)
-
-            # Count multiple faces (from face-api.js detection)
-            if ss.face_count and ss.face_count > 1:
-                multiple_person_count += 1
-            elif ss.multiple_people_detected:
-                multiple_person_count += 1
-
-            # Check metadata for phone/gaze detection (from COCO-SSD + face landmarks)
+            # Parse metadata once
             meta = ss.metadata if isinstance(ss.metadata, dict) else {}
             if isinstance(ss.metadata, str):
                 try:
@@ -167,19 +158,42 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
                 except (json.JSONDecodeError, TypeError):
                     meta = {}
 
-            if meta.get('phone_detected'):
-                phone_detected_count += 1
-
-            if meta.get('looking_away'):
-                looking_away_count += 1
-
-            # Also check issue_type field
             issue = ss.issue_type or ''
-            if 'phone' in issue.lower():
+
+            # Count multiple faces (from face-api.js detection)
+            if ss.face_count and ss.face_count > 1:
+                multiple_person_count += 1
+            elif ss.multiple_people_detected:
+                multiple_person_count += 1
+
+            # Count once per screenshot (prevent double-counting from metadata + issue_type)
+            phone_from_meta = meta.get('phone_detected', False)
+            phone_from_issue = 'phone' in issue.lower()
+            if phone_from_meta or phone_from_issue:
                 phone_detected_count += 1
-            if 'looking_away' in issue.lower() or 'gaze' in issue.lower():
+
+            looking_from_meta = meta.get('looking_away', False)
+            looking_from_issue = 'looking_away' in issue.lower() or 'gaze' in issue.lower()
+            if looking_from_meta or looking_from_issue:
                 looking_away_count += 1
 
+            # Separate flagged vs normal screenshots for display
+            if ss.screenshot_url:
+                has_issue = (
+                    getattr(ss, 'is_flagged', False) or
+                    (ss.face_count and ss.face_count > 1) or
+                    phone_from_meta or phone_from_issue or
+                    looking_from_meta or looking_from_issue
+                )
+                if has_issue:
+                    flagged_urls.append(ss.screenshot_url)
+                else:
+                    normal_urls.append(ss.screenshot_url)
+
+        # Show flagged screenshots first, fill remaining with normal ones
+        screenshot_urls = flagged_urls[:5]
+        if len(screenshot_urls) < 5:
+            screenshot_urls += normal_urls[:5 - len(screenshot_urls)]
         # Build cheating flags
         cheating_flags = []
 
