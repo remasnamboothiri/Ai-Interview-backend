@@ -45,3 +45,8 @@ langsmith==0.2.0
 
 sendgrid==6.11.0
 django-sendgrid-v5==1.2.3
+
+
+
+cloudinary==1.41.0
+

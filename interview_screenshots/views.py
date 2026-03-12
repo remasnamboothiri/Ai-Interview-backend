@@ -191,26 +191,79 @@ class InterviewScreenshotViewSet(viewsets.ModelViewSet):
                 'message': 'Screenshot upload failed but interview continues'
             }, status=status.HTTP_200_OK)
 
-    def _save_screenshot_file(self, file, interview_id):
-        screenshots_dir = os.path.join(settings.MEDIA_ROOT, 'screenshots', str(interview_id))
-        os.makedirs(screenshots_dir, exist_ok=True)
-        timestamp = int(time.time() * 1000)
-        filename = f"screenshot_{timestamp}_{file.name}"
-        filepath = os.path.join(screenshots_dir, filename)
-        with open(filepath, 'wb+') as destination:
-            for chunk in file.chunks():
-                destination.write(chunk)
+    # def _save_screenshot_file(self, file, interview_id):
+    #     screenshots_dir = os.path.join(settings.MEDIA_ROOT, 'screenshots', str(interview_id))
+    #     os.makedirs(screenshots_dir, exist_ok=True)
+    #     timestamp = int(time.time() * 1000)
+    #     filename = f"screenshot_{timestamp}_{file.name}"
+    #     filepath = os.path.join(screenshots_dir, filename)
+    #     with open(filepath, 'wb+') as destination:
+    #         for chunk in file.chunks():
+    #             destination.write(chunk)
 
-        # ✅ FIX: Build absolute URL using BACKEND_URL env var so screenshots
-        # load correctly in production (Render, etc.) and not just localhost.
-        # The old relative path (/media/screenshots/...) was stored in the DB
-        # and the frontend's onError retry only checked for 'localhost:8000',
-        # which is never present in the production URL — causing all images to fail silently.
-        backend_url = config('BACKEND_URL', default='http://localhost:8000')
-        logger.info(f"🔍 BACKEND_URL = '{backend_url}'")
-        # Ensure no trailing slash on base URL
-        backend_url = backend_url.rstrip('/')
-        return f"{backend_url}/media/screenshots/{interview_id}/{filename}"
+    #     # ✅ FIX: Build absolute URL using BACKEND_URL env var so screenshots
+    #     # load correctly in production (Render, etc.) and not just localhost.
+    #     # The old relative path (/media/screenshots/...) was stored in the DB
+    #     # and the frontend's onError retry only checked for 'localhost:8000',
+    #     # which is never present in the production URL — causing all images to fail silently.
+    #     backend_url = config('BACKEND_URL', default='http://localhost:8000')
+    #     logger.info(f"🔍 BACKEND_URL = '{backend_url}'")
+    #     # Ensure no trailing slash on base URL
+    #     backend_url = backend_url.rstrip('/')
+    #     return f"{backend_url}/media/screenshots/{interview_id}/{filename}"
+    
+    
+    def _save_screenshot_file(self, file, interview_id):
+        """
+        Save screenshot to Cloudinary cloud storage.
+        Returns the secure HTTPS URL of the uploaded image.
+        """
+        import cloudinary
+        import cloudinary.uploader
+        from decouple import config
+        
+        # Configure Cloudinary with credentials from environment variables
+        cloudinary.config(
+            cloud_name=config('CLOUDINARY_CLOUD_NAME'),
+            api_key=config('CLOUDINARY_API_KEY'),
+            api_secret=config('CLOUDINARY_API_SECRET'),
+            secure=True
+        )
+        
+        # Generate unique filename
+        timestamp = int(time.time() * 1000)
+        original_name = file.name.replace(' ', '_')
+        filename = f"screenshot_{timestamp}_{original_name}"
+        
+        # Upload to Cloudinary
+        # Folder structure: interview_screenshots/interview_19/screenshot_xxx.jpg
+        folder = f"interview_screenshots/{interview_id}"
+        
+        try:
+            upload_result = cloudinary.uploader.upload(
+                file,
+                folder=folder,
+                public_id=filename,
+                resource_type='image',
+                overwrite=False
+            )
+            
+            # Return the secure HTTPS URL
+            return upload_result['secure_url']
+            
+        except Exception as e:
+            logger.error(f"Cloudinary upload failed: {e}")
+            # Fallback to local storage if Cloudinary fails
+            screenshots_dir = os.path.join(settings.MEDIA_ROOT, 'screenshots', str(interview_id))
+            os.makedirs(screenshots_dir, exist_ok=True)
+            filepath = os.path.join(screenshots_dir, filename)
+            with open(filepath, 'wb+') as destination:
+                for chunk in file.chunks():
+                    destination.write(chunk)
+            backend_url = config('BACKEND_URL', default='http://localhost:8000')
+            backend_url = backend_url.rstrip('/')
+            return f"{backend_url}/media/screenshots/{interview_id}/{filename}"
+
 
     def _get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
