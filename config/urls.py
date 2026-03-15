@@ -53,13 +53,11 @@ urlpatterns = [
     path('api/', include(activity_log_urls)), 
     
     path('api/', include(system_setting_urls)), 
+
+    path('api/speech/', include('speech.urls')), #newly added for deepgram
 ]
 
 
 # Serve media files in development
-#if settings.DEBUG:
-    #urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-
-# Serve media files in all environments (development and production)
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

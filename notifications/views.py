@@ -14,19 +14,26 @@ class NotificationViewSet(viewsets.ModelViewSet):
     
     @method_permission_classes([AllowAny])
     def list(self, request):
-        """GET /api/notifications/ - List all notifications"""
+        """GET /api/notifications/ - List notifications with pagination"""
         try:
             user_id = request.query_params.get('user_id', None)
+            limit = int(request.query_params.get('limit', 20))
+            offset = int(request.query_params.get('offset', 0))
             
+            qs = Notification.objects.all().order_by('-created_at')
             if user_id:
-                notifications = Notification.objects.filter(user_id=user_id).order_by('-created_at')
-            else:
-                notifications = Notification.objects.all().order_by('-created_at')
+                qs = qs.filter(user_id=user_id)
+            
+            total = qs.count()
+            notifications = qs[offset:offset + limit]
             
             serializer = NotificationSerializer(notifications, many=True)
             return Response({
                 'success': True,
-                'data': serializer.data
+                'data': serializer.data,
+                'total': total,
+                'limit': limit,
+                'offset': offset,
             })
         except Exception as e:
             return Response({

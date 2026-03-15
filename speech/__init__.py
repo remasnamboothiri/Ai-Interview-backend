@@ -1,0 +1,1 @@
+# Speech services: TTS (Edge TTS) + STT token provider (Deepgram)

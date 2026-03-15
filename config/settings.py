@@ -17,9 +17,6 @@ from datetime import timedelta
 
 
 
-
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -124,6 +121,17 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD'),
         'HOST': config('DB_HOST'),
         'PORT': config('DB_PORT'),
+        
+    }
+}
+
+
+
+# Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'speech-cache',
     }
 }
 
@@ -206,6 +214,10 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',  # We'll control this per view
     ],
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+    },
 }
 
 # JWT Settings
@@ -299,6 +311,3 @@ LOGGING = {
         },
     },
 }
-
-
-

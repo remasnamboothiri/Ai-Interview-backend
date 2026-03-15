@@ -1,4 +1,4 @@
-absl-py==2.4.0
+﻿absl-py==2.4.0
 asgiref==3.11.0
 cffi==2.0.0
 charset-normalizer==3.4.4
@@ -50,3 +50,5 @@ django-sendgrid-v5==1.2.3
 
 cloudinary==1.41.0
 
+
+edge-tts
