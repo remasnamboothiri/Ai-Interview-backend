@@ -7,7 +7,7 @@ from .models import Interview
 import logging
 
 from activity_logs.models import ActivityLog
-from notifications.models import Notification
+# from notifications.models import Notification
 from interview_data.models import InterviewConversation
 from .result_generator import generate_interview_result
 
@@ -108,35 +108,35 @@ class InterviewViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 print(f"Error creating activity log: {e}")
 
-            try:
-                if interview.candidate and interview.candidate.user:
-                    Notification.objects.create(
-                        user=interview.candidate.user,
-                        notification_type='interview_scheduled',
-                        title='Interview Scheduled',
-                        message=f'Your interview for {interview.job.title} has been scheduled for {interview.scheduled_at.strftime("%B %d, %Y at %I:%M %p")}',
-                        related_resource_type='Interview',
-                        related_resource_id=interview.id,
-                        action_url=f'/interviews/{interview.id}',
-                        is_read=False
-                    )
-            except Exception as e:
-                print(f"Error creating candidate notification: {e}")
+            # try:
+            #     if interview.candidate and interview.candidate.user:
+            #         Notification.objects.create(
+            #             user=interview.candidate.user,
+            #             notification_type='interview_scheduled',
+            #             title='Interview Scheduled',
+            #             message=f'Your interview for {interview.job.title} has been scheduled for {interview.scheduled_at.strftime("%B %d, %Y at %I:%M %p")}',
+            #             related_resource_type='Interview',
+            #             related_resource_id=interview.id,
+            #             action_url=f'/interviews/{interview.id}',
+            #             is_read=False
+            #         )
+            # except Exception as e:
+            #     print(f"Error creating candidate notification: {e}")
 
-            try:
-                if interview.recruiter:
-                    Notification.objects.create(
-                        user=interview.recruiter,
-                        notification_type='interview_scheduled',
-                        title='Interview Scheduled',
-                        message=f'Interview scheduled with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title}',
-                        related_resource_type='Interview',
-                        related_resource_id=interview.id,
-                        action_url=f'/interviews/{interview.id}',
-                        is_read=False
-                    )
-            except Exception as e:
-                print(f"Error creating recruiter notification: {e}")
+            # try:
+            #     if interview.recruiter:
+            #         Notification.objects.create(
+            #             user=interview.recruiter,
+            #             notification_type='interview_scheduled',
+            #             title='Interview Scheduled',
+            #             message=f'Interview scheduled with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title}',
+            #             related_resource_type='Interview',
+            #             related_resource_id=interview.id,
+            #             action_url=f'/interviews/{interview.id}',
+            #             is_read=False
+            #         )
+            # except Exception as e:
+            #     print(f"Error creating recruiter notification: {e}")
 
             def send_email_async():
                 try:
@@ -188,17 +188,17 @@ class InterviewViewSet(viewsets.ModelViewSet):
                     ip_address=self.request.META.get('REMOTE_ADDR')
                 )
 
-                if interview.recruiter:
-                    Notification.objects.create(
-                        user=interview.recruiter,
-                        notification_type='interview_completed',
-                        title='Interview Completed',
-                        message=f'Interview with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title} has been completed',
-                        related_resource_type='Interview',
-                        related_resource_id=interview.id,
-                        action_url=f'/interviews/{interview.id}',
-                        is_read=False
-                    )
+                # if interview.recruiter:
+                #     Notification.objects.create(
+                #         user=interview.recruiter,
+                #         notification_type='interview_completed',
+                #         title='Interview Completed',
+                #         message=f'Interview with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title} has been completed',
+                #         related_resource_type='Interview',
+                #         related_resource_id=interview.id,
+                #         action_url=f'/interviews/{interview.id}',
+                #         is_read=False
+                #     )
             except Exception as e:
                 print(f"Error creating completion log/notification: {e}")
 
@@ -235,33 +235,33 @@ class InterviewViewSet(viewsets.ModelViewSet):
         except Exception as e:
             print(f"Error creating activity log: {e}")
 
-        try:
-            if interview.candidate and interview.candidate.user:
-                Notification.objects.create(
-                    user=interview.candidate.user,
-                    notification_type='interview_cancelled',
-                    title='Interview Cancelled',
-                    message=f'Your interview for {interview.job.title} has been cancelled. Reason: {interview.cancellation_reason}',
-                    related_resource_type='Interview',
-                    related_resource_id=interview.id,
-                    is_read=False
-                )
-        except Exception as e:
-            print(f"Error creating notification: {e}")
+        # try:
+        #     if interview.candidate and interview.candidate.user:
+        #         Notification.objects.create(
+        #             user=interview.candidate.user,
+        #             notification_type='interview_cancelled',
+        #             title='Interview Cancelled',
+        #             message=f'Your interview for {interview.job.title} has been cancelled. Reason: {interview.cancellation_reason}',
+        #             related_resource_type='Interview',
+        #             related_resource_id=interview.id,
+        #             is_read=False
+        #         )
+        # except Exception as e:
+        #     print(f"Error creating notification: {e}")
 
-        try:
-            if interview.recruiter:
-                Notification.objects.create(
-                    user=interview.recruiter,
-                    notification_type='interview_cancelled',
-                    title='Interview Cancelled',
-                    message=f'Interview with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title} has been cancelled',
-                    related_resource_type='Interview',
-                    related_resource_id=interview.id,
-                    is_read=False
-                )
-        except Exception as e:
-            print(f"Error creating recruiter notification: {e}")
+        # try:
+        #     if interview.recruiter:
+        #         Notification.objects.create(
+        #             user=interview.recruiter,
+        #             notification_type='interview_cancelled',
+        #             title='Interview Cancelled',
+        #             message=f'Interview with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title} has been cancelled',
+        #             related_resource_type='Interview',
+        #             related_resource_id=interview.id,
+        #             is_read=False
+        #         )
+        # except Exception as e:
+        #     print(f"Error creating recruiter notification: {e}")
 
         serializer = self.get_serializer(interview)
         return Response(serializer.data)
@@ -300,35 +300,35 @@ class InterviewViewSet(viewsets.ModelViewSet):
         except Exception as e:
             print(f"Error creating activity log: {e}")
 
-        try:
-            if interview.candidate and interview.candidate.user:
-                Notification.objects.create(
-                    user=interview.candidate.user,
-                    notification_type='interview_rescheduled',
-                    title='Interview Rescheduled',
-                    message=f'Your interview for {interview.job.title} has been rescheduled to {interview.scheduled_at.strftime("%B %d, %Y at %I:%M %p")}',
-                    related_resource_type='Interview',
-                    related_resource_id=interview.id,
-                    action_url=f'/interviews/{interview.id}',
-                    is_read=False
-                )
-        except Exception as e:
-            print(f"Error creating candidate notification: {e}")
+        # try:
+        #     if interview.candidate and interview.candidate.user:
+        #         Notification.objects.create(
+        #             user=interview.candidate.user,
+        #             notification_type='interview_rescheduled',
+        #             title='Interview Rescheduled',
+        #             message=f'Your interview for {interview.job.title} has been rescheduled to {interview.scheduled_at.strftime("%B %d, %Y at %I:%M %p")}',
+        #             related_resource_type='Interview',
+        #             related_resource_id=interview.id,
+        #             action_url=f'/interviews/{interview.id}',
+        #             is_read=False
+        #         )
+        # except Exception as e:
+        #     print(f"Error creating candidate notification: {e}")
 
-        try:
-            if interview.recruiter:
-                Notification.objects.create(
-                    user=interview.recruiter,
-                    notification_type='interview_rescheduled',
-                    title='Interview Rescheduled',
-                    message=f'Interview with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title} has been rescheduled',
-                    related_resource_type='Interview',
-                    related_resource_id=interview.id,
-                    action_url=f'/interviews/{interview.id}',
-                    is_read=False
-                )
-        except Exception as e:
-            print(f"Error creating recruiter notification: {e}")
+        # try:
+        #     if interview.recruiter:
+        #         Notification.objects.create(
+        #             user=interview.recruiter,
+        #             notification_type='interview_rescheduled',
+        #             title='Interview Rescheduled',
+        #             message=f'Interview with {interview.candidate.user.full_name if interview.candidate and interview.candidate.user else "candidate"} for {interview.job.title} has been rescheduled',
+        #             related_resource_type='Interview',
+        #             related_resource_id=interview.id,
+        #             action_url=f'/interviews/{interview.id}',
+        #             is_read=False
+        #         )
+        # except Exception as e:
+        #     print(f"Error creating recruiter notification: {e}")
 
         serializer = self.get_serializer(interview)
         return Response(serializer.data)
