@@ -37,8 +37,8 @@ class AIInterviewService:
             model="deepseek-chat",
             api_key=config('DEEPSEEK_API_KEY'),
             base_url="https://api.deepseek.com",
-            temperature=0.7,
-            max_tokens=300,
+            temperature=0.7, # ← 0=robotic, 1=creative, 0.7=balanced
+            max_tokens=300, # ← max length of each AI response
         )
 
         # Get reference questions
