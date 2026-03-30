@@ -514,22 +514,17 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 )
 
             candidate_message = request.data.get('message')
-            if not candidate_message:
-                return Response(
-                    {'error': 'message field is required'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            is_filler = request.data.get('is_filler', False)
 
-            # Save candidate's message
+            # Save candidate message
             InterviewConversation.objects.create(
                 interview=interview,
                 speaker='candidate',
                 message=candidate_message
             )
 
-            # Get AI response
             ai_service = AIInterviewService(interview.id)
-            result = ai_service.send_message(candidate_message)
+            result = ai_service.send_message(candidate_message, skip_count=is_filler)
 
             # Save AI's response
             InterviewConversation.objects.create(

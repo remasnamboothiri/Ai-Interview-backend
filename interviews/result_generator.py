@@ -87,6 +87,13 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
         communication_score=Decimal(str(evaluation.get('communication_score', 5.0))),
         cultural_fit_score=Decimal(str(evaluation.get('cultural_fit_score', 5.0))),
         behavioral_score=Decimal(str(evaluation.get('behavioral_score', 5.0))),
+        passed=(
+            float(evaluation.get('overall_score', 0)) >= 5.0 and
+            float(evaluation.get('technical_score', 0)) >= 5.0 and
+            float(evaluation.get('cultural_fit_score', 0)) >= 5.0 and
+            float(evaluation.get('behavioral_score', 0)) >= 5.0 and
+            float(evaluation.get('communication_score', 0)) >= 4.0
+        ),
         questions_asked=questions_asked,
         response_times=[],
         behavioral_analysis=evaluation.get('behavioral_analysis', {}),
@@ -140,6 +147,7 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
                 'multiple_person_count': 0,
                 'phone_detected_count': 0,
                 'looking_away_count': 0,
+                'camera_off_count': 0,
                 'note': 'No screenshots captured during interview',
             }
 
@@ -148,6 +156,7 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
         multiple_person_count = 0
         phone_detected_count = 0
         looking_away_count = 0
+        camera_off_count = 0  # ← NEW: track camera-off screenshots
 
         for ss in screenshots:
             # Parse metadata once
@@ -177,13 +186,20 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
             if looking_from_meta or looking_from_issue:
                 looking_away_count += 1
 
+            # ── NEW: Camera off detection ──────────────────────────
+            camera_off_from_meta = meta.get('camera_off', False)
+            camera_off_from_issue = 'camera_off' in issue.lower()
+            if camera_off_from_meta or camera_off_from_issue:
+                camera_off_count += 1
+
             # Separate flagged vs normal screenshots for display
             if ss.screenshot_url:
                 has_issue = (
                     getattr(ss, 'is_flagged', False) or
                     (ss.face_count and ss.face_count > 1) or
                     phone_from_meta or phone_from_issue or
-                    looking_from_meta or looking_from_issue
+                    looking_from_meta or looking_from_issue or
+                    camera_off_from_meta or camera_off_from_issue  # ← NEW
                 )
                 if has_issue:
                     flagged_urls.append(ss.screenshot_url)
@@ -194,6 +210,7 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
         screenshot_urls = flagged_urls[:5]
         if len(screenshot_urls) < 5:
             screenshot_urls += normal_urls[:5 - len(screenshot_urls)]
+
         # Build cheating flags
         cheating_flags = []
 
@@ -212,6 +229,12 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
                 f"Candidate looking away in {looking_away_count} screenshots "
                 f"— possible reading from external material"
             )
+        # ── NEW: Camera off flag ───────────────────────────────────
+        if camera_off_count >= 2:
+            cheating_flags.append(
+                f"Candidate disabled camera in {camera_off_count} screenshots "
+                f"— video was intentionally turned off during the interview"
+            )
 
         cheating_detected = len(cheating_flags) > 0
         severity = 'high' if len(cheating_flags) >= 2 else ('medium' if cheating_flags else 'none')
@@ -226,6 +249,7 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
             'multiple_person_count': multiple_person_count,
             'phone_detected_count': phone_detected_count,
             'looking_away_count': looking_away_count,
+            'camera_off_count': camera_off_count,  # ← NEW
         }
 
     except Exception as e:
@@ -235,6 +259,7 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
             'cheating_detected': False,
             'cheating_flags': [],
             'total_screenshots': 0,
+            'camera_off_count': 0,
             'error': str(e),
         }
 
@@ -277,6 +302,26 @@ Please factor these integrity concerns into your evaluation.
 
 **Interview Transcript:**
 {transcript}
+
+**CRITICAL — ASR TRANSCRIPT NOTICE:**
+This transcript was captured via voice recognition (speech-to-text) and may contain:
+- Misheared words or garbled phrases
+- Incorrect names (e.g. "Abana Patmohama" may actually mean "Aparna Padmakumar")
+- Technical terms spelled phonetically
+- Grammar errors caused by transcription, not by the candidate
+
+DO NOT penalize candidates for transcription errors. Judge the SUBSTANCE and INTENT
+of answers, not surface-level spelling or phrasing. If an answer seems garbled but
+the topic is clearly relevant, assume the candidate answered correctly and score accordingly.
+
+**IMPORTANT SCORING RULES:**
+- 1-2: Candidate gave NO substantive answers at all — complete silence or total irrelevance
+- 3-4: Partial engagement — some answers but missing key depth
+- 5-6: Adequate answers — addressed the questions reasonably
+- 7-8: Good answers — demonstrated relevant knowledge and experience
+- 9-10: Excellent — exceptional depth and clarity
+- If the candidate attempted to answer ALL questions with relevant content, minimum score is 5
+- NEVER score below 4 if there are 3 or more substantive candidate responses in the transcript
 
 **IMPORTANT INSTRUCTIONS:**
 - Evaluate based on the candidate's actual answers
@@ -343,7 +388,45 @@ Score Guidelines:
         logger.error(f"Raw text: {text[:500]}")
         raise
 
-    # Clamp scores
+    # ── ASR safety floor ──────────────────────────────────────────
+    # Prevent garbage scoring when the candidate clearly engaged.
+    # Counts substantive candidate turns (10+ words) from the transcript.
+    # If 3+ substantive turns exist, floor all scores at 4.0 and strip
+    # false "no engagement" weaknesses that ASR errors can cause.
+    candidate_lines = [
+        line for line in transcript.split('\n\n')
+        if line.startswith('Candidate:') and len(line.split()) >= 10
+    ]
+    substantive_turns = len(candidate_lines)
+
+    if substantive_turns >= 3:
+        for score_key in ['overall_score', 'technical_score', 'communication_score',
+                          'cultural_fit_score', 'behavioral_score']:
+            if score_key in evaluation:
+                current = float(evaluation[score_key])
+                evaluation[score_key] = max(current, 4.0)
+
+        # Remove false "no engagement" weaknesses
+        evaluation['weaknesses'] = [
+            w for w in evaluation.get('weaknesses', [])
+            if not any(phrase in w.lower() for phrase in [
+                'no answer', 'failed to engage', 'no technical',
+                'no demonstration', 'no behavioral', 'did not answer',
+                'no response', 'no engagement',
+            ])
+        ]
+
+        # Fix recommendation if it's reject but score is now 4+
+        if (evaluation.get('recommendation') == 'reject'
+                and float(evaluation.get('overall_score', 0)) >= 4.0):
+            evaluation['recommendation'] = 'maybe'
+
+        logger.info(
+            f"ASR floor applied: {substantive_turns} substantive turns detected, "
+            f"scores floored at 4.0"
+        )
+
+    # Clamp scores to valid range
     for key in ['overall_score', 'technical_score', 'communication_score',
                 'cultural_fit_score', 'behavioral_score']:
         if key in evaluation:
@@ -390,7 +473,7 @@ def _default_evaluation() -> dict:
         }
     }
 
-    
+
 def _create_empty_result(interview, user=None) -> InterviewResult:
     """Create a minimal result when no conversation exists."""
     evaluation = _default_evaluation()
