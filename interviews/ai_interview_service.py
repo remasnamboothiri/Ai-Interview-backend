@@ -37,8 +37,8 @@ class AIInterviewService:
             model="deepseek-chat",
             api_key=config('DEEPSEEK_API_KEY'),
             base_url="https://api.deepseek.com",
-            temperature=0.7, # ← 0=robotic, 1=creative, 0.7=balanced
-            max_tokens=300, # ← max length of each AI response
+            temperature=0.7,
+            max_tokens=300,
         )
 
         # Get reference questions
@@ -281,13 +281,10 @@ class AIInterviewService:
             "is_complete": False
         }
 
-    def send_message(self, candidate_message: str) -> Dict:
-        # :white_check_mark: FIX: Inject question count context so AI knows exactly where it is
-        # and doesn't conclude early
+    def send_message(self, candidate_message: str, skip_count: bool = False) -> Dict:
         questions_answered = self.questions_asked_count
         questions_remaining = self.target_questions - questions_answered
 
-        # Build context-aware prompt to prevent early termination
         if questions_remaining > 1:
             context_note = (
                 f"[SYSTEM: The candidate has answered {questions_answered} out of "
@@ -303,7 +300,6 @@ class AIInterviewService:
                 f"you will conclude with INTERVIEW_COMPLETE.]"
             )
         else:
-            # All questions answered — force conclusion
             context_note = (
                 f"[SYSTEM: The candidate has answered all {self.target_questions} required questions. "
                 f"You MUST now conclude the interview with INTERVIEW_COMPLETE.]"
@@ -312,17 +308,15 @@ class AIInterviewService:
         full_message = f"{context_note}\n\nCandidate said: {candidate_message}"
         ai_response = self._chat_send(full_message)
 
-        # :white_check_mark: FIX: Increment AFTER candidate answers (counts answered questions)
-        self.questions_asked_count += 1
+        # Only increment for real answers, not fillers
+        if not skip_count:
+            self.questions_asked_count += 1
 
-        # :white_check_mark: FIX: Only allow INTERVIEW_COMPLETE after target questions are reached
         is_complete = (
             "INTERVIEW_COMPLETE:" in ai_response
             and self.questions_asked_count >= self.target_questions
         )
 
-        # If AI tried to end early (before target), strip the INTERVIEW_COMPLETE
-        # and force it to continue
         if "INTERVIEW_COMPLETE:" in ai_response and not is_complete:
             logger.warning(
                 f"Interview {self.interview.id}: AI tried to end early at "
@@ -337,7 +331,6 @@ class AIInterviewService:
             "status": "in_progress",
             "message": ai_response,
             "current_question": ai_response,
-            # :white_check_mark: FIX: Return accurate progress counts
             "question_number": self.questions_asked_count,
             "total_questions": self.target_questions,
             "is_complete": is_complete
