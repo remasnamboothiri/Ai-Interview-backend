@@ -87,13 +87,7 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
         communication_score=Decimal(str(evaluation.get('communication_score', 5.0))),
         cultural_fit_score=Decimal(str(evaluation.get('cultural_fit_score', 5.0))),
         behavioral_score=Decimal(str(evaluation.get('behavioral_score', 5.0))),
-        passed=(
-            float(evaluation.get('overall_score', 0)) >= 5.0 and
-            float(evaluation.get('technical_score', 0)) >= 5.0 and
-            float(evaluation.get('cultural_fit_score', 0)) >= 5.0 and
-            float(evaluation.get('behavioral_score', 0)) >= 5.0 and
-            float(evaluation.get('communication_score', 0)) >= 4.0
-        ),
+        
         questions_asked=questions_asked,
         response_times=[],
         behavioral_analysis=evaluation.get('behavioral_analysis', {}),
