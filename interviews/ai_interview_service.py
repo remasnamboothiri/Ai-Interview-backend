@@ -34,11 +34,11 @@ class AIInterviewService:
 
         # Initialize DeepSeek via LangChain (OpenAI-compatible)
         self.llm = ChatOpenAI(
-            model="deepseek-chat",
+            model=config('DEEPSEEK_MODEL'),
             api_key=config('DEEPSEEK_API_KEY'),
-            base_url="https://api.deepseek.com",
-            temperature=0.7,
-            max_tokens=300,
+            base_url=config('DEEPSEEK_BASE_URL'),
+            temperature=float(config('DEEPSEEK_TEMPERATURE')),
+            max_tokens=int(config('DEEPSEEK_MAX_TOKENS')),
         )
 
         # Get reference questions

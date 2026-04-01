@@ -261,11 +261,11 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
 def _evaluate_with_deepseek(interview, transcript: str, screenshot_analysis: dict = None) -> dict:
     """Use DeepSeek via LangChain to evaluate the interview transcript."""
     llm = ChatOpenAI(
-        model="deepseek-chat",
+        model=config('DEEPSEEK_MODEL'),
         api_key=config('DEEPSEEK_API_KEY'),
-        base_url="https://api.deepseek.com",
-        temperature=0.3,
-        max_tokens=2000,
+        base_url=config('DEEPSEEK_BASE_URL'),
+        temperature=float(config('DEEPSEEK_EVAL_TEMPERATURE')),
+        max_tokens=int(config('DEEPSEEK_EVAL_MAX_TOKENS')),
     )
 
     job = interview.job

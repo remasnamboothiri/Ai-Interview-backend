@@ -25,8 +25,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-8)(khtke7+c5j9%izblnv&6$qzureh@!fdz_2nk1dzxs90h#wh')
+# SECRET_KEY = config('SECRET_KEY', default='django-insecure-8)(khtke7+c5j9%izblnv&6$qzureh@!fdz_2nk1dzxs90h#wh')
 
+
+# ✅ CORRECT — no fallback, force it to always come from .env
+SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
@@ -245,9 +248,9 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Screenshot Settings
-SCREENSHOT_INTERVAL_SECONDS = 10  # Capture every 10 seconds
-MAX_SCREENSHOTS_IN_REPORT = 10    # Include max 10 in report
-AUTO_FAIL_THRESHOLD = 3           # Auto-fail if 3+ violations
+SCREENSHOT_INTERVAL_SECONDS = int(config('SCREENSHOT_INTERVAL_SECONDS'))  # Capture every 10 seconds
+MAX_SCREENSHOTS_IN_REPORT = int(config('MAX_SCREENSHOTS_IN_REPORT'))    # Include max 10 in report
+AUTO_FAIL_THRESHOLD = int(config('AUTO_FAIL_THRESHOLD'))           # Auto-fail if 3+ violations
 
 # # Email Configuration
 # EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')

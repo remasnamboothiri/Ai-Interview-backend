@@ -294,7 +294,7 @@ def stt_token(request):
     return JsonResponse({
         'key': api_key,
         'provider': 'deepgram',
-        'model': 'nova-2',
+        'model': config('STT_MODEL'),
     })
 
 
