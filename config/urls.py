@@ -47,7 +47,7 @@ urlpatterns = [
     path('api/', include('interviews.urls')),
     path('api/interview-data/', include('interview_data.urls')),
     path('api/interview-screenshots/', include('interview_screenshots.urls')),
-    path('api/interview-results/', include('interview_results.urls')), 
+    path('api/', include('interview_results.urls')), 
     
     path('api/', include(notification_urls)),
     path('api/', include(activity_log_urls)), 

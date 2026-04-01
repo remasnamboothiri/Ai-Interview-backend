@@ -31,6 +31,7 @@ class InterviewResult(models.Model):
     weaknesses = models.JSONField(default=list, blank=True)
     red_flags = models.JSONField(default=list, blank=True)
     recommendation = models.CharField(max_length=20, choices=RECOMMENDATION_CHOICES)
+    passed = models.BooleanField(default=False)
     
     transcript = models.TextField(blank=True)
     recording_url = models.URLField(max_length=500, blank=True)

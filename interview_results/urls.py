@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import InterviewResultViewSet
 
 router = DefaultRouter()
-router.register(r'', InterviewResultViewSet, basename='interview-result')
+router.register(r'interview-results', InterviewResultViewSet, basename='interview-result')
 
 urlpatterns = [
     path('', include(router.urls)),
