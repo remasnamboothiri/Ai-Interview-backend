@@ -87,6 +87,13 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
         communication_score=Decimal(str(evaluation.get('communication_score', 5.0))),
         cultural_fit_score=Decimal(str(evaluation.get('cultural_fit_score', 5.0))),
         behavioral_score=Decimal(str(evaluation.get('behavioral_score', 5.0))),
+        passed=(
+            float(evaluation.get('overall_score', 0)) >= 5.0 and
+            float(evaluation.get('technical_score', 0)) >= 5.0 and
+            float(evaluation.get('cultural_fit_score', 0)) >= 5.0 and
+            float(evaluation.get('behavioral_score', 0)) >= 5.0 and
+            float(evaluation.get('communication_score', 0)) >= 4.0
+        ),
         
         questions_asked=questions_asked,
         response_times=[],
@@ -381,6 +388,20 @@ Score Guidelines:
         logger.error(f"Failed to parse AI evaluation JSON: {e}")
         logger.error(f"Raw text: {text[:500]}")
         raise
+
+    # ── Recalculate overall as average of component scores ────
+    # Prevents AI giving inconsistent overall vs component scores
+    component_scores = [
+        float(evaluation.get('technical_score', 0)),
+        float(evaluation.get('communication_score', 0)),
+        float(evaluation.get('cultural_fit_score', 0)),
+        float(evaluation.get('behavioral_score', 0)),
+    ]
+    if all(s > 0 for s in component_scores):
+        evaluation['overall_score'] = round(
+            sum(component_scores) / len(component_scores), 1
+        )
+        logger.info(f"Overall recalculated: {evaluation['overall_score']} from {component_scores}")
 
     # ── ASR safety floor ──────────────────────────────────────────
     # Prevent garbage scoring when the candidate clearly engaged.
