@@ -137,20 +137,26 @@ def _elevenlabs_synthesize(text: str, voice: str) -> bytes:
     if not api_key:
         raise ValueError('ELEVENLABS_API_KEY not configured')
 
-    voice_id = voice or 'EXAVITQu4vr4xnSDxMaL'
+    voice_id = config('TTS_VOICE', default='EXAVITQu4vr4xnSDxMaL')
+    model_id = config('ELEVENLABS_MODEL_ID', default='eleven_turbo_v2_5')
+    stability = float(config('ELEVENLABS_STABILITY', default='0.5'))
+    similarity_boost = float(config('ELEVENLABS_SIMILARITY_BOOST', default='0.75'))
 
+    logger.info(f'ElevenLabs TTS: voice={voice_id}, model={model_id}')
+
+    api_url = config('ELEVENLABS_API_URL', default='https://api.elevenlabs.io/v1/text-to-speech')
     resp = requests.post(
-        f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}',
+        f'{api_url}/{voice_id}',
         headers={
             'xi-api-key': api_key,
             'Content-Type': 'application/json',
         },
         json={
             'text': text,
-            'model_id': 'eleven_monolingual_v1',
+            'model_id': model_id,
             'voice_settings': {
-                'stability': 0.5,
-                'similarity_boost': 0.75,
+                'stability': stability,
+                'similarity_boost': similarity_boost,
             },
         },
     )
