@@ -22,13 +22,17 @@ import logging
 import json
 import hashlib
 import time
+import requests
 
 from django.http import HttpResponse, JsonResponse
 from django.core.cache import cache
 from rest_framework.decorators import api_view, permission_classes, authentication_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+
 from decouple import config
+from django.http import StreamingHttpResponse #newly added
+
 
 logger = logging.getLogger(__name__)
 
@@ -332,3 +336,48 @@ def tts_voices(request):
     except Exception as e:
         logger.error(f'Failed to list voices: {e}')
         return JsonResponse({'error': 'Failed to list voices'}, status=500)
+
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def tts_stream(request):
+    text = request.data.get('text', '')
+    if not text:
+        return JsonResponse({'error': 'No text'}, status=400)
+
+    provider = config('TTS_PROVIDER', default='edge').lower()
+    
+    if provider == 'elevenlabs':
+        api_key = config('ELEVENLABS_API_KEY', default='')
+        voice_id = config('TTS_VOICE', default='EXAVITQu4vr4xnSDxMaL')
+        model_id = config('ELEVENLABS_MODEL_ID', default='eleven_turbo_v2_5')
+
+        def generate():
+            resp = requests.post(
+                f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream',
+                headers={
+                    'xi-api-key': api_key,
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'text': text,
+                    'model_id': model_id,
+                    'voice_settings': {
+                        'stability': float(config('ELEVENLABS_STABILITY', default='0.5')),
+                        'similarity_boost': float(config('ELEVENLABS_SIMILARITY_BOOST', default='0.75')),
+                    },
+                },
+                stream=True
+            )
+            for chunk in resp.iter_content(chunk_size=1024):
+                if chunk:
+                    yield chunk
+
+        response = StreamingHttpResponse(generate(), content_type='audio/mpeg')
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+    # Fall back to existing tts_synthesize for edge
+    return tts_synthesize(request)
