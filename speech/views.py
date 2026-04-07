@@ -293,19 +293,49 @@ def stt_token(request):
     POST https://api.deepgram.com/v1/projects/{project_id}/keys
     to create short-lived keys instead of returning the main key.
     """
-    api_key = config('DEEPGRAM_API_KEY', default='')
-    if not api_key:
-        return JsonResponse({'error': 'DEEPGRAM_API_KEY not configured'}, status=500)
-
-    # Validate request comes from an active interview
     if not _validate_interview_token(request):
         logger.warning(f'STT token request without valid interview token from {request.META.get("REMOTE_ADDR")}')
 
-    return JsonResponse({
-        'key': api_key,
-        'provider': 'deepgram',
-        'model': config('STT_MODEL'),
-    })
+    provider = config('STT_PROVIDER', default='deepgram').lower()
+
+    if provider == 'soniox':
+        api_key = config('SONIOX_API_KEY', default='')
+        if not api_key:
+            return JsonResponse({'error': 'SONIOX_API_KEY not configured'}, status=500)
+        # Create temporary key for browser direct connection
+        try:
+            temp_resp = requests.post(
+                'https://api.soniox.com/v1/auth/temporary-api-key',
+                headers={
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'expires_in_seconds': 3600,
+                    'client_reference_id': 'interview-session',
+                }
+            )
+            if temp_resp.ok:
+                return JsonResponse({
+                    'key': temp_resp.json()['api_key'],
+                    'provider': 'soniox',
+                })
+        except Exception as e:
+            logger.error(f'Soniox temp key failed: {e}')
+        # Fallback to main key
+        return JsonResponse({
+            'key': api_key,
+            'provider': 'soniox',
+        })
+    else:
+        api_key = config('DEEPGRAM_API_KEY', default='')
+        if not api_key:
+            return JsonResponse({'error': 'DEEPGRAM_API_KEY not configured'}, status=500)
+        return JsonResponse({
+            'key': api_key,
+            'provider': 'deepgram',
+            'model': config('STT_MODEL'),
+        })
 
 
 @api_view(['GET'])
