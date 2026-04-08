@@ -79,6 +79,20 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
                 float(evaluation.get('overall_score', 5.0)), 3.0
             )
 
+    # ──: YOUR CODE decides pass/fail/redo ──────────
+    overall = float(evaluation.get('overall_score', 0))
+    communication = float(evaluation.get('communication_score', 0))
+
+    if overall > 8 and communication >= 5:
+        passed = True
+        recommendation = 'hire'
+    elif overall >= 5 and communication >= 5:
+        passed = False
+        recommendation = 'second_round'
+    else:
+        passed = False
+        recommendation = 'reject'        
+
     # Create the result
     result = InterviewResult.objects.create(
         interview=interview,
@@ -87,13 +101,7 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
         communication_score=Decimal(str(evaluation.get('communication_score', 5.0))),
         cultural_fit_score=Decimal(str(evaluation.get('cultural_fit_score', 5.0))),
         behavioral_score=Decimal(str(evaluation.get('behavioral_score', 5.0))),
-        passed=(
-            float(evaluation.get('overall_score', 0)) >= 5.0 and
-            float(evaluation.get('technical_score', 0)) >= 5.0 and
-            float(evaluation.get('cultural_fit_score', 0)) >= 5.0 and
-            float(evaluation.get('behavioral_score', 0)) >= 5.0 and
-            float(evaluation.get('communication_score', 0)) >= 4.0
-        ),
+        passed=passed, 
         
         questions_asked=questions_asked,
         response_times=[],
@@ -102,7 +110,7 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
         strengths=evaluation.get('strengths', []),
         weaknesses=evaluation.get('weaknesses', []),
         red_flags=evaluation.get('red_flags', []),
-        recommendation=evaluation.get('recommendation', 'maybe'),
+        recommendation=recommendation,
         transcript=transcript,
         ai_feedback={
             **evaluation.get('ai_feedback', {}),
@@ -359,10 +367,10 @@ the topic is clearly relevant, assume the candidate answered correctly and score
 }}
 
 Score Guidelines:
-- 8-10: Excellent, strong hire
-- 6-7: Good, potential hire
-- 4-5: Average, needs further evaluation
-- 1-3: Below expectations, likely reject"""
+- 8-10: Excellent performance
+- 6-7: Good performance
+- 4-5: Average performance
+- 1-3: Below expectations"""
 
     messages = [
         SystemMessage(content="You are an expert interview evaluator. Always respond with valid JSON only, no markdown."),
