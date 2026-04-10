@@ -87,7 +87,7 @@ def generate_interview_result(interview_id: int, user=None) -> InterviewResult:
         passed = True
         recommendation = 'hire'
     elif overall >= 5 and communication >= 5:
-        passed = False
+        passed = True
         recommendation = 'second_round'
     else:
         passed = False
