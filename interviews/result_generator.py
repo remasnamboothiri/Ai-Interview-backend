@@ -274,12 +274,12 @@ def _analyze_screenshots_from_metadata(interview_id: int) -> dict:
 
 
 def _evaluate_with_deepseek(interview, transcript: str, screenshot_analysis: dict = None) -> dict:
-    """Use DeepSeek via LangChain to evaluate the interview transcript."""
+    """Use DeepSeek Reasoner via LangChain to evaluate the interview transcript."""
     llm = ChatOpenAI(
-        model=config('DEEPSEEK_MODEL'),
+        model=config('DEEPSEEK_EVAL_MODEL', default='deepseek-reasoner'),  # Reasoner for deeper, more honest evaluation
         api_key=config('DEEPSEEK_API_KEY'),
         base_url=config('DEEPSEEK_BASE_URL'),
-        temperature=float(config('DEEPSEEK_EVAL_TEMPERATURE')),
+        temperature=0,  # Reasoner requires temperature=0
         max_tokens=int(config('DEEPSEEK_EVAL_MAX_TOKENS')),
     )
 
@@ -381,6 +381,18 @@ Score Guidelines:
     text = response.content.strip()
 
     # Clean up response (remove markdown code fences if present)
+    # Strip DeepSeek Reasoner thinking block
+    if '<think>' in text:
+        think_end = text.find('</think>')
+        if think_end != -1:
+            text = text[think_end + 8:].strip()
+        else:
+            # No closing tag — remove everything up to first {
+            brace_pos = text.find('{')
+            if brace_pos != -1:
+                text = text[brace_pos:]
+
+    # Clean up markdown code fences if present
     if text.startswith('```'):
         lines = text.split('\n')
         text = '\n'.join(lines[1:]) if len(lines) > 1 else text[3:]
