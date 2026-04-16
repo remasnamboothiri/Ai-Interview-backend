@@ -66,7 +66,9 @@ class InterviewResultViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(result)
             return Response(serializer.data)
         except InterviewResult.DoesNotExist:
-            return Response({'error': 'Result not found'}, status=status.HTTP_404_NOT_FOUND)
+            # Don't return 404 — result may still be processing in background
+            # Return 202 Accepted so frontend knows to retry after a few seconds
+            return Response({'error': 'Result is still being generated. Please wait a moment and try again.', 'status': 'processing'}, status=status.HTTP_202_ACCEPTED )  # 202 = accepted but not ready yet
         
         
         

@@ -556,9 +556,12 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
     @action(detail=True, methods=['post'])
     def end_interview(self, request, pk=None):
-        """End the interview and generate result."""
+        """End the interview and trigger result generation in background."""
+        from threading import Thread
+
         try:
             interview = self.get_object()
 
@@ -567,16 +570,18 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 interview.save()
 
             user = request.user if request.user and request.user.pk else None
-            try:
-                result = generate_interview_result(interview.id, user)
-                result_data = {
-                    'overall_score': float(result.overall_score),
-                    'recommendation': result.recommendation,
-                    'result_id': result.id,
-                }
-            except Exception as e:
-                logger.error(f"Result generation failed: {e}")
-                result_data = {'result_generation_error': str(e)}
+
+            # Run DeepSeek Reasoner in background thread
+            # This way the HTTP response returns immediately (no timeout)
+            # DeepSeek works in background and saves result to DB
+            def generate_in_background():
+                try:
+                    generate_interview_result(interview.id, user)
+                    logger.info(f"Background result generation complete for interview {interview.id}")
+                except Exception as e:
+                    logger.error(f"Background result generation failed: {e}")
+
+            Thread(target=generate_in_background, daemon=True).start()
 
             try:
                 user_log = request.user if request.user and request.user.pk else None
@@ -598,8 +603,8 @@ class InterviewViewSet(viewsets.ModelViewSet):
                 'success': True,
                 'interview_id': interview.id,
                 'status': interview.status,
-                'message': 'Interview completed and result generated.',
-                **result_data
+                'message': 'Interview completed. Result is being generated.',
+                'result_status': 'processing',   # ← frontend knows to wait/poll
             })
 
         except Interview.DoesNotExist:
@@ -607,3 +612,6 @@ class InterviewViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error ending interview: {str(e)}")
             return Response({'error': f'Failed to end interview: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+         
+
+    
